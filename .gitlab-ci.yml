@@ -12,12 +12,12 @@ truffle:
     - npm install -g solium
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
-    - soli
+    - solium -d ./contracts
 
 solium:
   stage: test
   script:
-    - npm install -g truffle
+    - npm install -g truffle@5.0.0-beta.2
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
     - truffle test
