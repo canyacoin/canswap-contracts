@@ -3,15 +3,21 @@ image: registry.gitlab.com/canya-com/node-build-container:1.2
 variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
 
-before_script:
-  - npm install -g truffle
-
 stages:
   - test
 
 truffle:
   stage: test
   script:
+    - npm install -g solium
+    - cd $APP_PATH
+    - echo -n "+ current working path:" && pwd
+    - soli
+
+solium:
+  stage: test
+  script:
+    - npm install -g truffle
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
     - truffle test
