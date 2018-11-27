@@ -1,0 +1,25 @@
+{
+  "name": "canswap-contracts",
+  "version": "0.0.0",
+  "description": "A decentralised liquidity network for CanYa",
+  "scripts": {
+    "test": "truffle test",
+    "lint": "solium -d ./contracts"
+  },
+  "dependencies": {
+    "chai": "^4.2.0",
+    "chai-bignumber": "^3.0.0",
+    "solium": "^1.1.8",
+    "truffle": "^5.0.0-beta.2"
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/canyaio/canswap-contracts.git"
+  },
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/canyaio/canswap-contracts/issues"
+  },
+  "homepage": "https://github.com/canyaio/canswap-contracts#readme"
+}
