@@ -17,7 +17,7 @@ interface ContractReceiver {
 
 library SafeMath {
 
-  function mul(uint256 a, uint256 b) internal view returns (uint256) {
+  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
     if (a == 0) {
       return 0;
     }
@@ -27,25 +27,25 @@ library SafeMath {
     return c;
   }
 
-  function div(uint256 a, uint256 b) internal view returns (uint256) {
+  function div(uint256 a, uint256 b) internal pure returns (uint256) {
     require(b > 0); // Solidity only automatically asserts when dividing by 0
     uint256 c = a / b;
     return c;
   }
 
-  function sub(uint256 a, uint256 b) internal view returns (uint256) {
+  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
     require(b <= a);
     uint256 c = a - b;
     return c;
   }
 
-  function add(uint256 a, uint256 b) internal view returns (uint256) {
+  function add(uint256 a, uint256 b) internal pure returns (uint256) {
     uint256 c = a + b;
     require(c >= a);
     return c;
   }
 
-  function mod(uint256 a, uint256 b) internal view returns (uint256) {
+  function mod(uint256 a, uint256 b) internal pure returns (uint256) {
     require(b != 0);
     return a % b;
   }
@@ -177,7 +177,7 @@ contract CanSwap is Owned {
   }
       
   // Swap and Send Function
-  function swapAndSend(address _from, address _to, uint256 _value, address _dest) public payable {
+  function swapAndSend(address _from, address _to, uint256 _value, address payable _dest) public payable {
 
     // UserInput Validations
     require(isActivated_[_from] == true);
@@ -272,9 +272,9 @@ contract CanSwap is Owned {
   // 
   
     // Returns Balances for Pool
-    function balances(address _token) public view returns (uint256[] memory _balances) {
-      _balances[0] = _getCANBalance(_token);
-       _balances[1] = _getBalance(_token);       
+    function balances() public pure returns (uint256[] memory _balances) {
+     // _balances[0] = _getCANBalance(_token);
+     //  _balances[1] = _getBalance(_token);       
         return _balances;
     }
   
@@ -330,7 +330,7 @@ contract CanSwap is Owned {
   // Internal Functions
   
   // Swap Function
-  function _swapFunction(address _from, address _to, uint256 _x, address _dest, bool isEther) internal {
+  function _swapFunction(address _from, address _to, uint256 _x, address payable _dest, bool isEther) internal {
     
     bool Single;    
     uint256 balX;
@@ -366,23 +366,23 @@ contract CanSwap is Owned {
         
         
      if (Single){
-        _singleSwap(_from, _to, _x, y, balX, balY, feeY, _dest, isEther);
+        _singleSwap(_from, _to, y, balX, balY, feeY, _dest, isEther);
      } else {
-        _doubleSwap(_from, _to, _x, y,  balX, balY, feeY, _dest, isEther);
+        _doubleSwap(_from, _to, y,  balX, balY, feeY, _dest, isEther);
      }
      
     }
     
     // SingleSwap Function
     function _singleSwap(address _from, address _to, 
-    uint256 _x, uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
-    address _dest, bool _isEther) internal{
+    uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
+    address payable _dest, bool _isEther) internal{
         
         // Update mappings and balances
         _updateMappings(_from, _to, _balX, _balY, _feeY);
 
         // Send token
-        _sendToken(_to, _isEther, _y);
+        _sendToken(_dest, _isEther, _y);
                
         // Emit the event log
         emit eventTokenEmitted(_to, _dest, _y, _feeY);
@@ -390,8 +390,8 @@ contract CanSwap is Owned {
     
     // DoubleSwap Function
     function _doubleSwap(address _from, address _to, 
-    uint256 _x, uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
-    address _dest, bool _isEther) internal {
+    uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
+    address payable _dest, bool _isEther) internal {
         
         // Round2        
         uint256 balC = _getCANBalance(_to);
@@ -412,13 +412,13 @@ contract CanSwap is Owned {
         _updateMappings(_to, _to, balC, balZ, feeZ);
 
         // Send token
-        _sendToken(_to, _isEther, z);
+        _sendToken(_dest, _isEther, z);
                
         // Emit the event log
         emit eventTokenEmittedDouble(_from, _to, _dest, _y, _feeY, z, feeZ);
     }
     
-    function _getOutput(uint256 x, uint256 X, uint256 Y) private returns (uint256 outPut){
+    function _getOutput(uint256 x, uint256 X, uint256 Y) private pure returns (uint256 outPut){
         uint256 numerator = (x.mul(Y)).mul(X);
         uint256 denom = x.add(X);
         uint256 denominator = denom.mul(denom);
@@ -426,7 +426,7 @@ contract CanSwap is Owned {
         return outPut;
     }
     
-    function _getLiqFee(uint256 x, uint256 X, uint256 Y) private returns (uint256 liqFee){
+    function _getLiqFee(uint256 x, uint256 X, uint256 Y) private pure returns (uint256 liqFee){
         uint256 numerator = (x.mul(x)).mul(Y);
         uint256 denom = x.add(X);
         uint256 denominator = denom.mul(denom);
@@ -434,7 +434,7 @@ contract CanSwap is Owned {
         return liqFee;
     }
 
-    function _getBalance(address _token) private returns (uint256 _balance){
+    function _getBalance(address _token) private view returns (uint256 _balance){
       if(_token == addrCAN){
         _balance = CANBalances_[_token];
       } else {
@@ -443,12 +443,12 @@ contract CanSwap is Owned {
         return _balance;
     }
     
-    function _getCANBalance(address _token) private returns (uint256 _balance){
+    function _getCANBalance(address _token) private view returns (uint256 _balance){
         _balance = CANBalances_[_token];
         return _balance;
     }
 
-    function _getFee(address _token) private returns (uint256 _fee){
+    function _getFee(address _token) private view returns (uint256 _fee){
       if(_token == addrCAN){
         _fee = CANFees_[_token];
       } else {
@@ -457,7 +457,7 @@ contract CanSwap is Owned {
         return _fee;
     }
 
-    function _getCANFee(address _token) private returns (uint256 _fee){
+    function _getCANFee(address _token) private view returns (uint256 _fee){
         _fee = CANFees_[_token];
         return _fee;
     }
@@ -475,10 +475,10 @@ contract CanSwap is Owned {
     }
     
     
-    function _sendToken(address _dest, bool _isEther, uint256 _sendValue) internal{
+    function _sendToken(address payable _dest, bool _isEther, uint256 _sendValue) internal{
         if(_isEther){
             // SendEther
-            _dest.call.value(_sendValue)();
+            _dest.transfer(_sendValue);
         }else {
             // Send the emission to the destination using ERC20 method
             ERC20 poolToken = ERC20(_dest);
@@ -490,7 +490,6 @@ contract CanSwap is Owned {
     // CreatePool
   function _createThisPool(address _token, string memory _API, string memory _URI, uint256 _c, uint256 _t) internal {
 
-    ERC20 token20 = ERC20(_token);
     uint256 stakerInt;
     uint256 stakeCount;
 
@@ -607,7 +606,6 @@ contract CanSwap is Owned {
 function _withdrawAllFromThisPool(address _token) internal onlyStaker {
       
     // Work out shares
-    uint256 StakerInt = mapStakerIndex_[msg.sender];
     uint256 stakerShare = mapPoolStakerShares_[_token][msg.sender];
     uint256 balTKN = _getBalance(_token);
     uint256 balCAN = _getCANBalance(_token);
@@ -641,7 +639,8 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
    uint256 stakeCount = mapPoolStakers_[_pool];
    
    for (uint i = 0; i < stakeCount; ++i){
-       address staker = mapPoolStakersStaker_[_pool][i];
+       uint160 addr = uint160(mapPoolStakersStaker_[_pool][i]);
+       address payable staker = address(addr);
        _iterateOverPool(_pool, staker);
    } 
    
@@ -650,7 +649,7 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
     TKNFees_[_pool] = 0;
 }
 
-  function _iterateOverPool(address _token, address _staker) internal {
+  function _iterateOverPool(address _token, address payable _staker) internal {
    
     // Work out shares
     uint256 stakerShare = mapPoolStakerShares_[_token][_staker];
