@@ -4,7 +4,7 @@ variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
 
 before_script:
-  - npm install -g truffle
+  - npm install
 
 stages:
   - test
@@ -14,4 +14,11 @@ truffle:
   script:
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
-    - truffle test
+    - npm run lint
+
+solium:
+  stage: test
+  script:
+    - cd $APP_PATH
+    - echo -n "+ current working path:" && pwd
+    - npm run test

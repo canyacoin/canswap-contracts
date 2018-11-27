@@ -5,6 +5,7 @@ interface/dist
 interface/dist-server
 interface/tmp
 interface/out-tsc
+bin*
 
 # Remove ethPM package contents
 installed_contracts/*
