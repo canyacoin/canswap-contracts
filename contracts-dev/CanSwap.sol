@@ -3,11 +3,7 @@ pragma solidity 0.5.0;
 // CanYaCoinToken Functions used in this contract
 contract ERC20 {
   function transferFrom (address _from, address _to, uint256 _value) public returns (bool success);
-  function balanceOf(address _owner) view public returns (uint256 balance);
-  function burn(uint256 value) public returns (bool success);
   function transfer (address _to, uint256 _value) public returns (bool success);
-  uint256 public totalSupply;
-  uint256 public decimals;
 }
 
 // ERC223
@@ -44,11 +40,7 @@ library SafeMath {
     require(c >= a);
     return c;
   }
-
-  function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-    require(b != 0);
-    return a % b;
-  }
+  
 }
 
 // Owned Contract
@@ -86,7 +78,6 @@ contract CanSwap is Owned {
     event eventTokenEmittedDouble(address indexed token1, address indexed token2, 
                                 address indexed dest, uint256 TKN1, uint256 liqFee1, 
                                 uint256 TKN2, uint256 liqFee2);
-
     event eventUpdatedPoolsBals(address indexed token, uint256 valueCAN, uint256 valueTKN);
     event eventUpdatedPoolsFees(address indexed token, uint256 valueCANFee, uint256 valueTKNFee);
     event eventCreatedPool(address indexed token, uint256 valueCAN, uint256 valueTKN); 
@@ -112,11 +103,12 @@ contract CanSwap is Owned {
     mapping(uint256 => address) mapIndexStaker_;                 // Returns the staker from index
     mapping(address => uint256) mapStakerIndex_;                 // Returns the index for staker
 
-    mapping(address => mapping(address => uint256)) mapStakerPoolShares_;   // Returns the unique Shares of Pools for a staker
+    mapping(address => mapping(address => uint256)) mapStakerPoolShares_;   // Returns the unique Shares of a Pool for a staker
     mapping(address => mapping(address => uint256)) mapPoolStakerShares_;   // Returns the unique Shares of Stakers in each pool
 
     mapping(address => uint256) mapStakerStakes_;                           // Returns the number of unique pools a staker is in
     mapping(address => mapping(uint256 => address)) mapStakerStakesPool_;   // Returns the pools for each Staker
+    mapping(address => uint256) mapTotalStakes_;                           // Returns the total staked for each pool
 
     mapping(address => uint256) mapPoolStakers_;                            // Returns the number of unique stakers in a pool
     mapping(address => mapping(uint256 => address)) mapPoolStakersStaker_;  // Returns the stakers at each index for each pool 
@@ -156,30 +148,18 @@ contract CanSwap is Owned {
  
   // Swap Function
   function swap(address _from, address _to, uint256 _value) public payable {
-      
-    // UserInput Validations
-    require(isActivated_[_from] == true);
-    require(isActivated_[_to] == true);
-    require(_value > 0);
-
-      // Determine if not ether (from or to address is not 0x0)
-      if(_from != address(0)){
-          if(_to != address(0)){
-              ERC20 token20 = ERC20(_from);                                         // Create ERC20 instance
-              require(token20.transferFrom(msg.sender, address(this), _value));     // TransferIn
-              _swapFunction(_from, _to, _value, msg.sender, false);                 // Swap!
-          }
-          return;
-      } else {
-        require(msg.value == _value);                                               // Enforce ether tfr = value
-        _swapFunction(_from, _to, _value, msg.sender, true);                        // Swap!
-      } 
+    _swapAndSend(_from, _to, _value, msg.sender);
   }
       
   // Swap and Send Function
   function swapAndSend(address _from, address _to, uint256 _value, address payable _dest) public payable {
-
-    // UserInput Validations
+    _swapAndSend(_from, _to, _value, _dest);
+  }
+ 
+  // Swap and Send Internal
+  function _swapAndSend(address _from, address _to, uint256 _value, address payable _dest) internal {
+      
+          // UserInput Validations
     require(isActivated_[_from] == true);
     require(isActivated_[_to] == true);
     require(_value > 0);
@@ -267,6 +247,11 @@ contract CanSwap is Owned {
       isBlacklisted_[_token] = false;
   } 
   
+  function deactivatePool(address _token) public onlyOwner{
+      require(isPool_[_token] == true);
+      isActivated_[_token] = false;
+  }
+  
   // Readonly Functions
   //
   // 
@@ -295,6 +280,7 @@ contract CanSwap is Owned {
 
     // Returns Stakers Share of Pool
     function share(address _token, address _staker) public view returns (uint256 _price) {
+        // TotalStaked
         return mapPoolStakerShares_[_token][_staker];
     } 
     
@@ -545,8 +531,6 @@ contract CanSwap is Owned {
       emit eventCreatedPool(_token, _c, _t);
     }
 
-
-
   function _updateThisPool (address _token, string memory _URI, string memory _API) internal onlyStaker {
       poolURIs_[_token] = _URI;
       poolAPIs_[_token] = _API;
@@ -576,7 +560,7 @@ contract CanSwap is Owned {
         stakerCount = mapPoolStakers_[_token] + 1;
     }
     
-    require(stakerCount < 125);     // We don't want more than 125 stakers per pool to limit complexity
+      require(stakerCount < 125);     // We don't want more than 125 stakers per pool to limit complexity
     
       uint256 balC = _getCANBalance(_token);
       uint256 balT = _getBalance(_token);
