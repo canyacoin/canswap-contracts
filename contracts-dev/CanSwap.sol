@@ -207,8 +207,22 @@ contract CanSwap is Owned {
   
     // Stake In
   function stakePool(address _token, uint256 _c, uint256 _t) public returns (bool success) {
-      require(isPool_[_token] = true);
-      _stakeInThisPool(_token, _c, _t);
+
+      require(isPool_[_token] = true);      // Only for an existing pool
+      
+      // It's ok to stake in with 0 on one side
+      if (_t != 0){
+      ERC20 token20 = ERC20(_token);                                          // Create ERC20 instance
+      require(token20.transferFrom(msg.sender, address(this), _t));           // TransferIn tokens
+      }
+      if (_c != 0{
+      require(CAN20.transferFrom(msg.sender, address(this), _c));             // TransferIn CAN
+      } 
+      
+      _checkStakers(_token);                // Check stakers 
+      _stakeInThisPool(_token, _c, _t);     // Stake
+      bal_CAN += _c;                        // Add to global balance
+     
       return true;
   }  
   
@@ -497,6 +511,7 @@ contract CanSwap is Owned {
       // Find the average Stake
       uint256 numer = _c.add(_t);
       uint256 stakeAve = numer.div(2);
+      uint256 shareAve = stakeAve * 
       
       // Map Balances and Fees
       CANBalances_[_token] = _c;
@@ -535,9 +550,9 @@ contract CanSwap is Owned {
       poolURIs_[_token] = _URI;
       poolAPIs_[_token] = _API;
   }
- 
-  function _stakeInThisPool(address _token, uint256 _c, uint256 _t) internal {
-      
+  
+    function _checkStakers(address _token) internal {
+    
     uint256 stakerInt;
     uint256 stakeCount;
     uint256 stakerCount;
@@ -559,31 +574,37 @@ contract CanSwap is Owned {
         isStaker_[msg.sender] = true;
         stakerCount = mapPoolStakers_[_token] + 1;
     }
-    
       require(stakerCount < 125);     // We don't want more than 125 stakers per pool to limit complexity
+      mapStakerStakes_[msg.sender] = stakeCount;
+    
+      // Map the progressive count of stakers for this pool
+      mapPoolStakers_[_token] = stakerCount;
+      mapPoolStakersStaker_[_token][stakerCount] = msg.sender;
+  }
+ 
+  function _stakeInThisPool(address _token, uint256 _c, uint256 _t) internal {
     
       uint256 balC = _getCANBalance(_token);
       uint256 balT = _getBalance(_token);
             
-      uint256 C = _c.div(_c.add(balC));
-      uint256 T = _c.div(_c.add(balC));
-      uint256 numer = C.add(T);
-      uint256 stakeAve = numer.div(2);
+      uint256 C = _c.div(_c.add(balC));             // Get share of CAN side in %
+      uint256 T = _t.div(_t.add(balT));             // Get share of Token side in %
+      uint256 numer = C.add(T);                     // Add
+      uint256 stakeAve = numer.div(2);              // Get average between CAN and TKN side
+      uint256 bal_Tot = _t.add(balT);               // Get new total of Token side
+      uint256 shareAve = stakeAve.mul(bal_Tot);     // Get share of the Token side (will mirror CAN side)
       
-       bal_CAN += _c;
-       
       // Map
       CANBalances_[_token] = balC.add(_c);
       TKNBalances_[_token] = balT.add(_t);
       
       // Map Staker
-      mapStakerPoolShares_[msg.sender][_token] = stakeAve;
-      mapPoolStakerShares_[_token][msg.sender] = stakeAve;
-      mapStakerStakes_[msg.sender] = stakeCount;
+      mapStakerPoolShares_[msg.sender][_token] = shareAve;
+      mapPoolStakerShares_[_token][msg.sender] = shareAve;
       
-      // Map the progressive count of stakers for this pool
-      mapPoolStakers_[_token] = stakerCount;
-      mapPoolStakersStaker_[_token][stakerCount] = msg.sender;
+      // Map new Token total
+      uint256 total = mapTotalStakes_[_token];
+      mapTotalStakes_[_token] = total.add(_t);         // Add the total for this pool 
   }
  
   
@@ -615,7 +636,11 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
     
     // Map Staker
     mapStakerPoolShares_[msg.sender][_token] = 0;
-    mapPoolStakerShares_[_token][msg.sender] = 0;
+    mapPoolStakerShares_[_token][msg.sender] = 0;    
+          
+    // Map new Token total
+    uint256 total = mapTotalStakes_[_token];
+    mapTotalStakes_[_token] = total.sub(stakerShare);   // Remove the stakerShare from the total
   }
   
   function _distributeFeesForPool(address _pool) internal onlyStaker {
