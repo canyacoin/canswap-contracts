@@ -7,16 +7,17 @@ before_script:
   - npm install
 
 stages:
+  - lint
   - test
 
-truffle:
-  stage: test
+solium:
+  stage: lint
   script:
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
     - npm run lint
 
-solium:
+truffle:
   stage: test
   script:
     - cd $APP_PATH

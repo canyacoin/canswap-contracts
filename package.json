@@ -4,15 +4,17 @@
   "description": "A decentralised liquidity network for CanYa",
   "scripts": {
     "test": "truffle test",
+    "coverage": "solidity-coverage",
     "lint": "solium -d ./contracts"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
+    "solidity-coverage": "^0.5.11",
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
     "solium": "^1.1.8",
     "truffle": "^5.0.0-beta.2"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/canyaio/canswap-contracts.git"
