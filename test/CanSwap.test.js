@@ -1,4 +1,3 @@
-
 const CanSwap = artifacts.require("CanSwap");
 
 /**

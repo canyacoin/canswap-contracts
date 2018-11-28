@@ -6,10 +6,12 @@ The continuous liquidity pools are permissionless; anyone can add or remove liqu
 The pools rely on permissionless arbitrage to ensure correct market pricing of assets at any time. 
 
 
-
 ## Contract overview
 
 ## Test procedure
 
 ## Run locally
+
+## Resources
+:page_with_curl: [Whitepaper](https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf)
 
