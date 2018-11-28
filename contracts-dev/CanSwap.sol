@@ -215,7 +215,7 @@ contract CanSwap is Owned {
       ERC20 token20 = ERC20(_token);                                          // Create ERC20 instance
       require(token20.transferFrom(msg.sender, address(this), _t));           // TransferIn tokens
       }
-      if (_c != 0{
+      if (_c != 0){
       require(CAN20.transferFrom(msg.sender, address(this), _c));             // TransferIn CAN
       } 
       
@@ -224,7 +224,7 @@ contract CanSwap is Owned {
       bal_CAN += _c;                        // Add to global balance
      
       return true;
-  }  
+  } 
   
       // Stake Out
   function withdrawAll(address _token) public returns (bool success) {
@@ -522,11 +522,12 @@ contract CanSwap is Owned {
       mapPoolIndex_[_token] = intPools;      
       
       // Map new Staker
-      mapStakerPoolShares_[msg.sender][_token] = stakeAve;
-      mapPoolStakerShares_[_token][msg.sender] = stakeAve;
+      mapStakerPoolShares_[msg.sender][_token] = shareAve;
+      mapPoolStakerShares_[_token][msg.sender] = shareAve;
       mapStakerStakes_[msg.sender] = stakeCount;
       mapPoolStakers_[_token] = 0;
       mapPoolStakersStaker_[_token][0] = msg.sender;
+      mapTotalStakes_[_token] = _t;
  
       // Map Resources
       poolURIs_[_token] = _URI;
@@ -548,8 +549,8 @@ contract CanSwap is Owned {
       poolURIs_[_token] = _URI;
       poolAPIs_[_token] = _API;
   }
-  
-    function _checkStakers(address _token) internal {
+ 
+  function _checkStakers(address _token) internal {
     
     uint256 stakerInt;
     uint256 stakeCount;
@@ -579,7 +580,8 @@ contract CanSwap is Owned {
       mapPoolStakers_[_token] = stakerCount;
       mapPoolStakersStaker_[_token][stakerCount] = msg.sender;
   }
- 
+  
+  
   function _stakeInThisPool(address _token, uint256 _c, uint256 _t) internal {
     
       uint256 balC = _getCANBalance(_token);
@@ -619,7 +621,7 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
     
     // Transfer Shares 
     if(_token == address(0)){
-    msg.sender.transfer(shareTKN);             // Send Ether
+    msg.sender.transfer(shareTKN);                      // Send Ether
     require(CAN20.transfer(msg.sender, shareCAN));      // Send CAN  
     } else {
     ERC20 token20 = ERC20(_token);
@@ -634,11 +636,12 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
     
     // Map Staker
     mapStakerPoolShares_[msg.sender][_token] = 0;
-    mapPoolStakerShares_[_token][msg.sender] = 0;    
-          
+    mapPoolStakerShares_[_token][msg.sender] = 0;
+    
     // Map new Token total
     uint256 total = mapTotalStakes_[_token];
     mapTotalStakes_[_token] = total.sub(stakerShare);   // Remove the stakerShare from the total
+      
   }
   
   function _distributeFeesForPool(address _pool) internal onlyStaker {
