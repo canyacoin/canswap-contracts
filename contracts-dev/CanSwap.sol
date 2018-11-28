@@ -508,10 +508,8 @@ contract CanSwap is Owned {
     
       bal_CAN += _c;
       
-      // Find the average Stake
-      uint256 numer = _c.add(_t);
-      uint256 stakeAve = numer.div(2);
-      uint256 shareAve = stakeAve * 
+      // Find the Pool Share - should be 100% of Stake since a brand new pool
+      uint256 shareAve = _t;
       
       // Map Balances and Fees
       CANBalances_[_token] = _c;
