@@ -88,6 +88,22 @@ contract CanSwap is Ownable {
         _;
     }
 
+    /** 
+      * @dev Modifier - requires user to be a staker in the pool
+      */
+    modifier onlyStaker(address _pool) {
+        require(mapPoolStakes[_pool][msg.sender].stakeTKN > 0 || mapPoolStakes[_pool][msg.sender].stakeCAN > 0, "User must be staker in pool");
+        _;
+    }
+
+    /** 
+      * @dev Modifier - requires user to be creator of a pool
+      */
+    modifier onlyCreator(address _pool) {
+        require(mapPoolStakerAddress[_pool][0] == msg.sender, "User must be creator of the pool");
+        _;
+    }
+
     /**
      * @dev Create a liquidity pool paired with CAN and perform initial stake
      */
@@ -117,7 +133,9 @@ contract CanSwap is Ownable {
         require(_amountTkn > 0, "Pool must receive initial TKN stake");
         require(_amountCan > 0, "Pool must receive initial CAN stake");
 
-        // TODO - Add pool size limitations (due to gas cost)
+        /** TODO
+            Implement pool staker upper limit (due to gas cost of allocateFees)
+         */ 
         
         if(_token == address(0)){
             require(msg.value == _amountTkn, "Pool creator must send ETH stake");
@@ -174,6 +192,55 @@ contract CanSwap is Ownable {
                 stakerRewards.rewardCAN += feeShareCAN;
             }
         }
+    }
+
+    /**
+     * @dev Withdraws a staker completely from the pool
+     */
+    function withdrawFromPool(address _pool) 
+    external
+    poolIsActive(_pool)
+    onlyStaker(_pool) {
+        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
+        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
+
+        PoolStake memory stakerBalance = mapPoolStakes[_pool][msg.sender];
+        mapPoolStakes[_pool][msg.sender] = PoolStake(0, 0);
+        
+        uint256 totalTKN = stakerRewards.rewardTKN.add(stakerBalance.stakeTKN);
+        uint256 totalCAN = stakerRewards.rewardCAN.add(stakerBalance.stakeCAN);
+
+        if(_pool == address(0)){
+            require(address(this).balance >= totalTKN, "Pool has insufficient ETH balance to transfer to user");
+            (msg.sender).transfer(totalTKN);
+        } else {
+            ERC20 token = ERC20(_pool);                                          
+            require(token.transfer(msg.sender, totalTKN), "Pool has insufficient TKN balance to transfer to user");    
+        }
+
+        require(CAN.transfer(msg.sender, totalCAN), "Pool has insufficient CAN to transfer to staker");
+    }
+
+    /**
+     * @dev Withdraws a stakers accumulated fees for a particular pool
+     */
+    function withdrawFees(address _pool) 
+    external
+    poolIsActive(_pool)
+    onlyStaker(_pool) {
+        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
+        require(stakerRewards.rewardTKN > 0 || stakerRewards.rewardCAN > 0, "Pool must contain rewards for the staker");
+        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
+        
+        if(_pool == address(0)){
+            require(address(this).balance >= stakerRewards.rewardTKN, "Pool has insufficient ETH balance to transfer to user");
+            (msg.sender).transfer(stakerRewards.rewardTKN);
+        } else {
+            ERC20 token = ERC20(_pool);                                          
+            require(token.transfer(msg.sender, stakerRewards.rewardTKN), "Pool has insufficient TKN balance to transfer to user");    
+        }
+
+        require(CAN.transfer(msg.sender, stakerRewards.rewardCAN), "Pool has insufficient CAN to transfer to staker");
     }
 
     /**
@@ -304,6 +371,4 @@ contract CanSwap is Ownable {
     {
         return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
     }
-    
-
 }
