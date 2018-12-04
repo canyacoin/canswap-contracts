@@ -1,6 +1,7 @@
 pragma solidity 0.5.0;
 
 import "./Ownable.sol";
+import "./SafeMath.sol";
 
 /** @title Required standard ERC20 token interface */
 contract ERC20 {
@@ -14,6 +15,8 @@ contract ERC20 {
  */
 contract CanSwap is Ownable {
 
+    using SafeMath for uint256;
+
     struct PoolDetails {
         string uri;
         string api;
@@ -26,22 +29,22 @@ contract CanSwap is Ownable {
     }
 
     struct PoolBalance {
-        uint128 balTKN;
-        uint128 balCAN;
+        uint256 balTKN;
+        uint256 balCAN;
     }
 
     struct PoolStake {
-        uint128 stakeTKN;
-        uint128 stakeCAN;
+        uint256 stakeTKN;
+        uint256 stakeCAN;
     }
 
     struct PoolFees {
-        uint128 feeTKN;
-        uint128 feeCAN;
+        uint256 feeTKN;
+        uint256 feeCAN;
     }
 
     event eventCreatedPool(address indexed token, string uri, string api); 
-    event eventStake(address indexed token, uint128 amountTkn, uint128 amountCan);  
+    event eventStake(address indexed token, uint256 amountTkn, uint256 amountCan);  
     
 
     ERC20 public CAN;
@@ -83,7 +86,7 @@ contract CanSwap is Ownable {
      * @dev Create a liquidity pool paired with CAN and perform initial stake
      */
     function createPoolForToken(address _token, string calldata _uri, string calldata _api, 
-    uint128 _amountTkn, uint128 _amountCan) 
+    uint256 _amountTkn, uint256 _amountCan) 
     external 
     payable {
         require(mapPoolStatus[_token].exists == false, "Pool must not exist");
@@ -100,7 +103,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Perform stake in pool
      */
-    function stakeInPool(address _token, uint128 _amountTkn, uint128 _amountCan) 
+    function stakeInPool(address _token, uint256 _amountTkn, uint256 _amountCan) 
     public
     payable
     poolIsActive(_token) 
@@ -147,14 +150,14 @@ contract CanSwap is Ownable {
     }
     
     /**
-     * @dev Internal swap function
+     * @dev Internal swap and transfer function
      */
     function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
     internal
     poolIsActive(_from)
-    poolIsActive(_to) {        
+    poolIsActive(_to)
+    returns (bool success) {        
         require(_value > 0, "Must be attempting to swap a non zero amount of tokens");
-
 
         if(_from == address(0)){
             require(msg.value == _value);                    
@@ -163,33 +166,99 @@ contract CanSwap is Ownable {
             require(token.transferFrom(msg.sender, address(this), _value));
         }
 
-        uint128 swapOutput;
+        uint256 swapOutput;
 
         if(_from == address(CAN) || _to == address(CAN)){
             swapOutput = _executeSwap(_from, _to, _value);
         } else {
-            initialSwapOutput = _executeSwap(_from, address(CAN), _value);
-            swapOutput = _executeSwap(address(CAN), _to, initalSwapOutput);
+            uint256 initialSwapOutput = _executeSwap(_from, address(CAN), _value);
+            swapOutput = _executeSwap(address(CAN), _to, initialSwapOutput);
         }
 
         require(swapOutput > 0, "Must be some swap output");
 
         if(_to == address(0)) {
+            require(address(this).balance >= swapOutput, "Contract must have enough ETH to pay recipient");
             _recipient.transfer(swapOutput);
         }else {
             ERC20 outputToken = ERC20(_to);
-            outputToken.transfer(_recipient, swapOutput);
+            require(outputToken.transfer(_recipient, swapOutput), "Contract must release tokens to recipient");
         }
+
+        return true;
     }
 
-    function _executeSwap(address _from, address _to, )
+    /**
+     * @dev Internal swap execution
+     */
+    function _executeSwap(address _from, address _to, uint256 _value)
     internal
-    returns (uint128 swapOutput)
+    returns (uint256 tokensToEmit)
     {
         bool fromCan = _from == address(CAN);
-        // TODO - Ensure pool has adequate liquidity
-        // handle ETH
+        address poolId = fromCan ? _to : _from;
+        if(fromCan){
+            require(mapPoolBalances[poolId].balCAN > _value, "Pool must have adequate CAN liquidity");
+        } else {
+            require(mapPoolBalances[poolId].balTKN > _value, "Pool must have adequate TKN liquidity");
+
+        }
+
+        uint256 balFrom = _getPoolBalance(_from, fromCan);
+        uint256 balTo = _getPoolBalance(_to, !fromCan);
+        
+        uint256 output = _getOutput(_value, balFrom, balTo);
+        uint256 liqFee = _getLiqFee(_value, balFrom, balTo);
+
+        if(fromCan){
+            mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.add(_value);
+            mapPoolBalances[poolId].balTKN = mapPoolBalances[poolId].balTKN.sub(output);
+            mapPoolFees[poolId].feeTKN = mapPoolFees[poolId].feeTKN.add(liqFee);
+        } else {
+            mapPoolBalances[poolId].balTKN = mapPoolBalances[poolId].balTKN.add(_value);
+            mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.sub(output);
+            mapPoolFees[poolId].feeCAN = mapPoolFees[poolId].feeCAN.add(liqFee);
+        }
+        
+        return output.sub(liqFee);
+    }
+
+    /**
+     * @dev Get output of swap
+     */
+    function _getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    private 
+    pure 
+    returns (uint256 outPut){
+        uint256 numerator = (_input.mul(_outputBal)).mul(_inputBal);
+        uint256 denom = _input.add(_inputBal);
+        denom = denom.mul(denom);
+        return numerator.div(denom);
+    }
+
+    /**
+     * @dev Get liquidity fee from swap
+     */
+    function _getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    private 
+    pure 
+    returns (uint256 liqFee){
+        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
+        uint256 denom = _input.add(_inputBal);
+        denom = denom.mul(denom);
+        return numerator.div(denom);
+    }
+
+    /**
+     * @dev Get balance of pool
+     */
+    function _getPoolBalance(address _pool, bool _base)
+    internal
+    view
+    returns (uint256 _balance)
+    {
+        return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
     }
     
- 
+
 }
