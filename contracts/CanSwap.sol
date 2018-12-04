@@ -107,8 +107,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Create a liquidity pool paired with CAN and perform initial stake
      */
-    function createPoolForToken(address _token, string calldata _uri, string calldata _api, 
-    uint256 _amountTkn, uint256 _amountCan) 
+    function createPoolForToken(address _token, string calldata, string calldata, uint256 _amountTkn, uint256 _amountCan) 
     external 
     payable {
         require(mapPoolStatus[_token].exists == false, "Pool must not exist");
@@ -121,6 +120,17 @@ contract CanSwap is Ownable {
 
         require(stakeInPool(_token, _amountTkn, _amountCan), "Stake must be successful");
     }
+
+    /**
+     * @dev Update meta for pool
+     */
+    function updatePoolDetails(address _pool, string calldata, string calldata) 
+    external
+    poolExists(_pool)
+    onlyCreator(_pool) {
+        mapPoolDetails[_pool] = PoolDetails(_uri, _api);
+    }
+
 
     /**
      * @dev Perform stake in pool
@@ -161,12 +171,12 @@ contract CanSwap is Ownable {
      */
     function allocateFees(address _pool) 
     public
-    poolIsActive(_pool) {
+    poolExists(_pool) {
 
         /** TODO
             If we need to optimise this (allocate per token), we should also change 
             architecture to individual mappings to avoid SLOAD costs
-         */
+         */ 
 
         require(_pool != address(CAN), "Ambiguous pool address");
 
@@ -199,7 +209,7 @@ contract CanSwap is Ownable {
      */
     function withdrawFromPool(address _pool) 
     external
-    poolIsActive(_pool)
+    poolExists(_pool)
     onlyStaker(_pool) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
         mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
@@ -226,7 +236,7 @@ contract CanSwap is Ownable {
      */
     function withdrawFees(address _pool) 
     external
-    poolIsActive(_pool)
+    poolExists(_pool)
     onlyStaker(_pool) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
         require(stakerRewards.rewardTKN > 0 || stakerRewards.rewardCAN > 0, "Pool must contain rewards for the staker");
@@ -255,7 +265,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Perform swap and return funds to recipient
      */
-    function swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
+    function swapAndSend(address _from, address _to, uint256 _value, address _recipient) 
     public 
     payable {
         require(_recipient != address(0), "Recipient must be non empty address");
@@ -265,7 +275,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Internal swap and transfer function
      */
-    function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
+    function _swapAndSend(address _from, address _to, uint256 _value, address _recipient) 
     private
     poolIsActive(_from)
     poolIsActive(_to)
@@ -273,10 +283,10 @@ contract CanSwap is Ownable {
         require(_value > 0, "Must be attempting to swap a non zero amount of tokens");
 
         if(_from == address(0)){
-            require(msg.value == _value);                    
+            require(msg.value == _value, "Sender must send ETH as payment");
         } else {
             ERC20 token = ERC20(_from);                                        
-            require(token.transferFrom(msg.sender, address(this), _value));
+            require(token.transferFrom(msg.sender, address(this), _value), "Sender must send TKN as payment");
         }
 
         uint256 swapOutput;
