@@ -37,6 +37,11 @@ contract CanSwap is Ownable {
         uint256 stakeTKN;
         uint256 stakeCAN;
     }
+    
+    struct PoolStakeRewards {
+        uint256 rewardTKN;
+        uint256 rewardCAN;
+    }
 
     struct PoolFees {
         uint256 feeTKN;
@@ -60,6 +65,7 @@ contract CanSwap is Ownable {
     mapping(address => uint16) mapPoolStakerCount;
     mapping(address => mapping(uint16 => address)) mapPoolStakerAddress;
     mapping(address => mapping(address => PoolStake)) mapPoolStakes;
+    mapping(address => mapping(address => PoolStakeRewards)) mapPoolStakeRewards;
 
 
     constructor (address _canToken) public {
@@ -110,6 +116,8 @@ contract CanSwap is Ownable {
     returns (bool success) {
         require(_amountTkn > 0, "Pool must receive initial TKN stake");
         require(_amountCan > 0, "Pool must receive initial CAN stake");
+
+        // TODO - Add pool size limitations (due to gas cost)
         
         if(_token == address(0)){
             require(msg.value == _amountTkn, "Pool creator must send ETH stake");
@@ -128,6 +136,44 @@ contract CanSwap is Ownable {
         
         emit eventStake(_token, _amountTkn, _amountCan);
         return true;
+    }
+
+    /**
+     * @dev Allocates fees accumulated in a pool to the stakers based on their pool share
+     */
+    function allocateFees(address _pool) 
+    public
+    poolIsActive(_pool) {
+
+        /** TODO
+            If we need to optimise this (allocate per token), we should also change 
+            architecture to individual mappings to avoid SLOAD costs
+         */
+
+        require(_pool != address(CAN), "Ambiguous pool address");
+
+        PoolFees memory initialPoolFees = mapPoolFees[_pool];
+        require(initialPoolFees.feeTKN > 0 || initialPoolFees.feeCAN > 0, "Pool must have some recorded fees");
+        mapPoolFees[_pool] = PoolFees(0, 0);
+
+        PoolBalance memory poolBalance = mapPoolBalances[_pool];        
+
+        uint16 stakerCount = mapPoolStakerCount[_pool];
+        for (uint16 i = 0; i < stakerCount; i++) {
+            address staker = mapPoolStakerAddress[_pool][i];
+            PoolStake memory stake = mapPoolStakes[_pool][staker];
+            if(stake.stakeTKN > 0 || stake.stakeCAN > 0){
+                uint256 poolShareTKN = stake.stakeTKN.div(poolBalance.balTKN);
+                uint256 poolShareCAN = stake.stakeCAN.div(poolBalance.balCAN);
+                uint256 poolShareAVG = (poolShareTKN.add(poolShareCAN)).div(2);
+                uint256 feeShareTKN = poolShareAVG * initialPoolFees.feeTKN;
+                uint256 feeShareCAN = poolShareAVG * initialPoolFees.feeCAN;
+            
+                PoolStakeRewards storage stakerRewards = mapPoolStakeRewards[_pool][staker];
+                stakerRewards.rewardTKN += feeShareTKN;
+                stakerRewards.rewardCAN += feeShareCAN;
+            }
+        }
     }
 
     /**
@@ -153,7 +199,7 @@ contract CanSwap is Ownable {
      * @dev Internal swap and transfer function
      */
     function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
-    internal
+    private
     poolIsActive(_from)
     poolIsActive(_to)
     returns (bool success) {        
@@ -192,7 +238,7 @@ contract CanSwap is Ownable {
      * @dev Internal swap execution
      */
     function _executeSwap(address _from, address _to, uint256 _value)
-    internal
+    private
     returns (uint256 tokensToEmit)
     {
         bool fromCan = _from == address(CAN);
@@ -201,7 +247,6 @@ contract CanSwap is Ownable {
             require(mapPoolBalances[poolId].balCAN > _value, "Pool must have adequate CAN liquidity");
         } else {
             require(mapPoolBalances[poolId].balTKN > _value, "Pool must have adequate TKN liquidity");
-
         }
 
         uint256 balFrom = _getPoolBalance(_from, fromCan);
@@ -253,7 +298,7 @@ contract CanSwap is Ownable {
      * @dev Get balance of pool
      */
     function _getPoolBalance(address _pool, bool _base)
-    internal
+    private
     view
     returns (uint256 _balance)
     {
