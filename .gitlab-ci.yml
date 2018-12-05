@@ -1,4 +1,4 @@
-image: registry.gitlab.com/canya-com/node-build-container:1.2
+image: node:8.14.0-jessie
 
 variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
