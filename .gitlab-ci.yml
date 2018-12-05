@@ -8,18 +8,17 @@ before_script:
   - sleep 5
 
 stages:
-  - lint
-  - test
+  - validate
 
-solium:
-  stage: lint
+lint:solium:
+  stage: validate
   script:
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
     - npm run lint
 
-truffle:
-  stage: test
+test:truffle:
+  stage: validate
   script:
     - cd $APP_PATH
     - npm run test
