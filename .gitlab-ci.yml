@@ -4,6 +4,9 @@ variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
 
 before_script:
+  - npm install -g ganache-cli
+  - cd $APP_PATH
+  - npm install
   - ganache-cli -p 8545 > /dev/null &
   - sleep 5
 
