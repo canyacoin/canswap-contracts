@@ -1,10 +1,9 @@
-image: node:8.14.0-jessie
+image: registry.gitlab.com/canya-com/devops/smart-contract-build-container:0.1
 
 variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
 
 before_script:
-  - npm install -g ganache-cli
   - cd $APP_PATH
   - npm install
   - ganache-cli -p 8545 > /dev/null &

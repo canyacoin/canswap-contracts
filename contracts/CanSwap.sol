@@ -20,12 +20,16 @@ contract CanSwap is Ownable {
     struct PoolStatus {
         bool exists;
         bool active;
-        bool blacklisted;
     }
 
     struct PoolBalance {
         uint256 balTKN;
         uint256 balCAN;
+    }
+
+    struct PoolFees {
+        uint256 feeTKN;
+        uint256 feeCAN;
     }
 
     struct PoolStake {
@@ -38,10 +42,6 @@ contract CanSwap is Ownable {
         uint256 rewardCAN;
     }
 
-    struct PoolFees {
-        uint256 feeTKN;
-        uint256 feeCAN;
-    }
 
     event eventCreatedPool(address indexed token, string uri, string api); 
     event eventStake(address indexed token, uint256 amountTkn, uint256 amountCan);  
@@ -58,10 +58,12 @@ contract CanSwap is Ownable {
     mapping(address => PoolFees) mapPoolFees; 
 
     mapping(address => uint16) mapPoolStakerCount;
-    mapping(address => mapping(uint16 => address)) mapPoolStakerAddress;
+    mapping(address => mapping(uint16 => address payable)) mapPoolStakerAddress;
     mapping(address => mapping(address => PoolStake)) mapPoolStakes;
     mapping(address => mapping(address => PoolStakeRewards)) mapPoolStakeRewards;
 
+    mapping(address => uint16) mapStakerPoolCount;
+    mapping(address => mapping(uint16 => address)) mapStakerPools;
 
     constructor (address _canToken) public {
         CAN = IERC20(_canToken);
@@ -76,9 +78,9 @@ contract CanSwap is Ownable {
     }
 
     /** 
-      * @dev Modifier - requires pool to be active
+      * @dev Modifier - requires pool to be active or base currency
       */
-    modifier poolIsActive(address _token) {
+    modifier poolIsActiveOrBase(address _token) {
         require(mapPoolStatus[_token].active || _token == address(CAN), "Pool must be active");
         _;
     }
@@ -86,9 +88,19 @@ contract CanSwap is Ownable {
     /** 
       * @dev Modifier - requires user to be a staker in the pool
       */
-    modifier onlyStaker(address _pool) {
-        require(mapPoolStakes[_pool][msg.sender].stakeTKN > 0 || mapPoolStakes[_pool][msg.sender].stakeCAN > 0, "User must be staker in pool");
+    modifier onlyStaker(address _pool, address _staker) {
+        require(_isStaker(_pool, _staker), "User must be staker in pool");
         _;
+    }
+
+    /** 
+      * @dev Bool is staker in pool
+      */
+    function _isStaker(address _pool, address _staker)
+    internal 
+    view
+    returns (bool) {
+        return mapPoolStakes[_pool][_staker].stakeTKN > 0 || mapPoolStakes[_pool][_staker].stakeCAN > 0;
     }
 
     /** 
@@ -109,7 +121,7 @@ contract CanSwap is Ownable {
         
         mapIndexToPool[poolCount] = _token;
         mapPoolDetails[_token] = PoolDetails(_uri, _api);
-        mapPoolStatus[_token] = PoolStatus(true, true, false);
+        mapPoolStatus[_token] = PoolStatus(true, true);
         poolCount += 1;
         emit eventCreatedPool(_token, _uri, _api);
 
@@ -126,6 +138,28 @@ contract CanSwap is Ownable {
         mapPoolDetails[_pool] = PoolDetails(_uri, _api);
     }
 
+    /**
+     * @dev Activate the pool
+     */
+    function activatePool(address _pool) 
+    external
+    onlyCreator(_pool) {
+        PoolStatus storage pool = mapPoolStatus[_pool];
+        require(pool.exists && pool.active == false, "Pool must be inactive");
+        pool.active = true;
+    }
+
+    /**
+     * @dev De activate the pool
+     */
+    function deactivatePool(address _pool) 
+    external
+    onlyCreator(_pool) {
+        PoolStatus storage pool = mapPoolStatus[_pool];
+        require(pool.exists && pool.active, "Pool must be active");
+        pool.active = false;
+    }
+
 
     /**
      * @dev Perform stake in pool
@@ -133,7 +167,7 @@ contract CanSwap is Ownable {
     function stakeInPool(address _token, uint256 _amountTkn, uint256 _amountCan) 
     public
     payable
-    poolIsActive(_token) 
+    poolIsActiveOrBase(_token) 
     returns (bool success) {
         require(_amountTkn > 0, "Pool must receive initial TKN stake");
         require(_amountCan > 0, "Pool must receive initial CAN stake");
@@ -157,6 +191,9 @@ contract CanSwap is Ownable {
         mapPoolStakerCount[_token] += 1;
         mapPoolStakes[_token][msg.sender] = PoolStake(_amountTkn, _amountCan);
         
+        mapStakerPools[msg.sender][mapStakerPoolCount[msg.sender]] = _token;
+        mapStakerPoolCount[msg.sender] += 1;
+
         emit eventStake(_token, _amountTkn, _amountCan);
         return true;
     }
@@ -200,30 +237,63 @@ contract CanSwap is Ownable {
     }
 
     /**
-     * @dev Withdraws a staker completely from the pool
+     * @dev Completely settles pool
      */
-    function withdrawFromPool(address _pool) 
+    function settlePool(address _pool) 
     external
     poolExists(_pool)
-    onlyStaker(_pool) {
-        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
-        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
+    onlyCreator(_pool) {        
+        PoolStatus storage pool = mapPoolStatus[_pool];
+        pool.active = false;
 
-        PoolStake memory stakerBalance = mapPoolStakes[_pool][msg.sender];
-        mapPoolStakes[_pool][msg.sender] = PoolStake(0, 0);
-        
+        uint16 stakerCount = mapPoolStakerCount[_pool];
+        for (uint16 i = 0; i < stakerCount; i++) {
+            address payable staker = mapPoolStakerAddress[_pool][i];
+            if(_isStaker(_pool, staker)){
+                _withdrawFromPool(_pool, staker);
+            }
+        }
+    }
+
+    /**
+     * @dev Withdraw my stake and fees from the pool
+     */
+    function withdrawFromPool(address _pool)
+    external {
+        _withdrawFromPool(_pool, msg.sender);
+    }
+
+    /**
+     * @dev Withdraws a staker completely from the pool
+     */
+    function _withdrawFromPool(address _pool, address payable _staker) 
+    internal
+    poolExists(_pool)
+    onlyStaker(_pool, _staker) {
+        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][_staker];
+        mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(0, 0);
+
+        PoolStake memory stakerBalance = mapPoolStakes[_pool][_staker];
+        mapPoolStakes[_pool][_staker] = PoolStake(0, 0);
+
+        PoolBalance memory currentPoolBalance = mapPoolBalances[_pool];
+        mapPoolBalances[_pool] = PoolBalance(currentPoolBalance.balTKN.sub(stakerBalance.stakeTKN), currentPoolBalance.balCAN.sub(stakerBalance.stakeCAN));
+
         uint256 totalTKN = stakerRewards.rewardTKN.add(stakerBalance.stakeTKN);
         uint256 totalCAN = stakerRewards.rewardCAN.add(stakerBalance.stakeCAN);
 
-        if(_pool == address(0)){
-            require(address(this).balance >= totalTKN, "Pool has insufficient ETH balance to transfer to user");
-            (msg.sender).transfer(totalTKN);
-        } else {
-            IERC20 token = IERC20(_pool);                                          
-            require(token.transfer(msg.sender, totalTKN), "Pool has insufficient TKN balance to transfer to user");    
+        if(totalTKN > 0){    
+            if(_pool == address(0)){
+                require(address(this).balance >= totalTKN, "Pool has insufficient ETH balance to transfer to user");
+                (_staker).transfer(totalTKN);
+            } else {
+                IERC20 token = IERC20(_pool);                                          
+                require(token.transfer(_staker, totalTKN), "Pool has insufficient TKN balance to transfer to user");    
+            }
         }
-
-        require(CAN.transfer(msg.sender, totalCAN), "Pool has insufficient CAN to transfer to staker");
+        if(totalCAN > 0){
+            require(CAN.transfer(_staker, totalCAN), "Pool has insufficient CAN to transfer to staker");
+        }
     }
 
     /**
@@ -232,20 +302,24 @@ contract CanSwap is Ownable {
     function withdrawFees(address _pool) 
     external
     poolExists(_pool)
-    onlyStaker(_pool) {
+    onlyStaker(_pool, msg.sender) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
         require(stakerRewards.rewardTKN > 0 || stakerRewards.rewardCAN > 0, "Pool must contain rewards for the staker");
         mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
         
-        if(_pool == address(0)){
-            require(address(this).balance >= stakerRewards.rewardTKN, "Pool has insufficient ETH balance to transfer to user");
-            (msg.sender).transfer(stakerRewards.rewardTKN);
-        } else {
-            IERC20 token = IERC20(_pool);                                          
-            require(token.transfer(msg.sender, stakerRewards.rewardTKN), "Pool has insufficient TKN balance to transfer to user");    
+        if(stakerRewards.rewardTKN > 0){  
+            if(_pool == address(0)){
+                require(address(this).balance >= stakerRewards.rewardTKN, "Pool has insufficient ETH balance to transfer to user");
+                (msg.sender).transfer(stakerRewards.rewardTKN);
+            } else {
+                IERC20 token = IERC20(_pool);                                          
+                require(token.transfer(msg.sender, stakerRewards.rewardTKN), "Pool has insufficient TKN balance to transfer to user");    
+            }
         }
 
-        require(CAN.transfer(msg.sender, stakerRewards.rewardCAN), "Pool has insufficient CAN to transfer to staker");
+        if(stakerRewards.rewardCAN > 0){
+            require(CAN.transfer(msg.sender, stakerRewards.rewardCAN), "Pool has insufficient CAN to transfer to staker");
+        }        
     }
 
     /**
@@ -272,8 +346,8 @@ contract CanSwap is Ownable {
      */
     function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
     private
-    poolIsActive(_from)
-    poolIsActive(_to)
+    poolIsActiveOrBase(_from)
+    poolIsActiveOrBase(_to)
     returns (bool success) {        
         require(_value > 0, "Must be attempting to swap a non zero amount of tokens");
 
@@ -376,4 +450,29 @@ contract CanSwap is Ownable {
     {
         return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
     }
+
+
+    /**
+     * @dev Get pool
+     */
+    function getPool(address _pool)
+    external
+    view
+    poolExists(_pool)
+    returns (
+        string memory uri,
+        string memory api,
+        bool active,
+        uint256 balTKN,
+        uint256 balCAN,
+        uint256 feeTKN,
+        uint256 feeCAN
+    ) {
+        PoolDetails memory details = mapPoolDetails[_pool];
+        PoolStatus memory status = mapPoolStatus[_pool];
+        PoolBalance memory balance = mapPoolBalances[_pool];
+        PoolFees memory fees = mapPoolFees[_pool];
+        return (details.uri, details.api, status.active, balance.balTKN, balance.balCAN, fees.feeTKN, fees.feeCAN); 
+    }
 }
+
