@@ -2,12 +2,7 @@ pragma solidity 0.5.0;
 
 import "./Ownable.sol";
 import "./SafeMath.sol";
-
-/** @title Required standard ERC20 token interface */
-contract ERC20 {
-    function transferFrom (address _from, address _to, uint256 _value) public returns (bool success);
-    function transfer (address _to, uint256 _value) public returns (bool success);
-}
+import "./IERC20.sol";
 
 /**
  * @title CanSwap liquidity pool
@@ -52,7 +47,7 @@ contract CanSwap is Ownable {
     event eventStake(address indexed token, uint256 amountTkn, uint256 amountCan);  
     
 
-    ERC20 public CAN;
+    IERC20 public CAN;
 
     uint16 public poolCount = 0;
     mapping(uint16 => address) mapIndexToPool;
@@ -69,7 +64,7 @@ contract CanSwap is Ownable {
 
 
     constructor (address _canToken) public {
-        CAN = ERC20(_canToken);
+        CAN = IERC20(_canToken);
     }
 
     /** 
@@ -107,7 +102,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Create a liquidity pool paired with CAN and perform initial stake
      */
-    function createPoolForToken(address _token, string calldata, string calldata, uint256 _amountTkn, uint256 _amountCan) 
+    function createPoolForToken(address _token, string calldata _uri, string calldata _api, uint256 _amountTkn, uint256 _amountCan) 
     external 
     payable {
         require(mapPoolStatus[_token].exists == false, "Pool must not exist");
@@ -124,7 +119,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Update meta for pool
      */
-    function updatePoolDetails(address _pool, string calldata, string calldata) 
+    function updatePoolDetails(address _pool, string calldata _uri, string calldata _api) 
     external
     poolExists(_pool)
     onlyCreator(_pool) {
@@ -150,7 +145,7 @@ contract CanSwap is Ownable {
         if(_token == address(0)){
             require(msg.value == _amountTkn, "Pool creator must send ETH stake");
         } else {
-            ERC20 token = ERC20(_token);                                          
+            IERC20 token = IERC20(_token);                                          
             require(token.transferFrom(msg.sender, address(this), _amountTkn), "Must be able to transfer tokens from pool creator to pool");    
         }
         require(CAN.transferFrom(msg.sender, address(this), _amountCan), "Must be able to transfer CAN from pool creator to pool");             
@@ -224,7 +219,7 @@ contract CanSwap is Ownable {
             require(address(this).balance >= totalTKN, "Pool has insufficient ETH balance to transfer to user");
             (msg.sender).transfer(totalTKN);
         } else {
-            ERC20 token = ERC20(_pool);                                          
+            IERC20 token = IERC20(_pool);                                          
             require(token.transfer(msg.sender, totalTKN), "Pool has insufficient TKN balance to transfer to user");    
         }
 
@@ -246,7 +241,7 @@ contract CanSwap is Ownable {
             require(address(this).balance >= stakerRewards.rewardTKN, "Pool has insufficient ETH balance to transfer to user");
             (msg.sender).transfer(stakerRewards.rewardTKN);
         } else {
-            ERC20 token = ERC20(_pool);                                          
+            IERC20 token = IERC20(_pool);                                          
             require(token.transfer(msg.sender, stakerRewards.rewardTKN), "Pool has insufficient TKN balance to transfer to user");    
         }
 
@@ -265,7 +260,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Perform swap and return funds to recipient
      */
-    function swapAndSend(address _from, address _to, uint256 _value, address _recipient) 
+    function swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
     public 
     payable {
         require(_recipient != address(0), "Recipient must be non empty address");
@@ -275,7 +270,7 @@ contract CanSwap is Ownable {
     /**
      * @dev Internal swap and transfer function
      */
-    function _swapAndSend(address _from, address _to, uint256 _value, address _recipient) 
+    function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
     private
     poolIsActive(_from)
     poolIsActive(_to)
@@ -285,7 +280,7 @@ contract CanSwap is Ownable {
         if(_from == address(0)){
             require(msg.value == _value, "Sender must send ETH as payment");
         } else {
-            ERC20 token = ERC20(_from);                                        
+            IERC20 token = IERC20(_from);                                        
             require(token.transferFrom(msg.sender, address(this), _value), "Sender must send TKN as payment");
         }
 
@@ -304,7 +299,7 @@ contract CanSwap is Ownable {
             require(address(this).balance >= swapOutput, "Contract must have enough ETH to pay recipient");
             _recipient.transfer(swapOutput);
         }else {
-            ERC20 outputToken = ERC20(_to);
+            IERC20 outputToken = IERC20(_to);
             require(outputToken.transfer(_recipient, swapOutput), "Contract must release tokens to recipient");
         }
 
