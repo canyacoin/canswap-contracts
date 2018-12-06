@@ -681,5 +681,4 @@ function _withdrawAllFromThisPool(address _token) internal onlyStaker {
     }
     emit eventFeesDistributedTo(_token, shareCANFee, shareTKNFee);
   }
-
 }
