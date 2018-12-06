@@ -3,16 +3,19 @@
   "version": "0.0.0",
   "description": "A decentralised liquidity network for CanYa",
   "scripts": {
-    "test": "truffle test",
+    "test": "truffle test --network development",
+    "coverage": "solidity-coverage",
     "lint": "solium -d ./contracts"
   },
-  "dependencies": {
+  "dependencies": {},
+  "devDependencies": {
     "chai": "^4.2.0",
     "chai-bignumber": "^3.0.0",
+    "solidity-coverage": "^0.5.11",
     "solium": "^1.1.8",
-    "truffle": "^5.0.0-beta.2"
+    "truffle": "5.0.0-beta.2",
+    "web3-utils": "^1.0.0-beta.36"
   },
-  "devDependencies": {},
   "repository": {
     "type": "git",
     "url": "git+https://github.com/canyaio/canswap-contracts.git"

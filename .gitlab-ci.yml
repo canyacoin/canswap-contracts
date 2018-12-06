@@ -1,24 +1,26 @@
-image: registry.gitlab.com/canya-com/node-build-container:1.2
+image: registry.gitlab.com/canya-com/devops/smart-contract-build-container:0.1
 
 variables:
   APP_PATH: /builds/$CI_PROJECT_PATH
 
 before_script:
+  - cd $APP_PATH
   - npm install
+  - ganache-cli -p 8545 > /dev/null &
+  - sleep 5
 
 stages:
-  - test
+  - validate
 
-truffle:
-  stage: test
+lint:solium:
+  stage: validate
   script:
     - cd $APP_PATH
     - echo -n "+ current working path:" && pwd
     - npm run lint
 
-solium:
-  stage: test
+test:truffle:
+  stage: validate
   script:
     - cd $APP_PATH
-    - echo -n "+ current working path:" && pwd
     - npm run test
