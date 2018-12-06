@@ -26,7 +26,6 @@ The pools rely on permissionless arbitrage to ensure correct market pricing of a
 ## Limitations
  - Allocate fees must be called intermittently in order to optimise staker rewards
  - Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
-   - Work around solutions to limiting this number will have knock on effects throughout the contract
 
 ## Run locally
  - Migrations do xxxxxxxxxxxx
