@@ -78,7 +78,7 @@ contract CanSwap is Ownable {
 
     /** @dev Track staking activity accross the pools */
     mapping(address => uint16) mapPoolStakerCount;
-    mapping(address => mapping(uint16 => address payable)) mapPoolStakerAddress;
+    mapping(address => mapping(uint16 => address)) mapPoolStakerAddress;
     mapping(address => mapping(address => PoolStake)) mapPoolStakes;
     mapping(address => mapping(address => PoolStakeRewards)) mapPoolStakeRewards;
 
@@ -507,7 +507,7 @@ contract CanSwap is Ownable {
      */
     function _executeWithdrawal(address _pool, address payable _recipient, uint256 _amountTKN, uint256 _amountCAN)
     private {
-        if(_amountTKN > 0){  
+        if(_amountTKN > 0){
             if(_pool == address(0)){
                 require(address(this).balance >= _amountTKN, "Pool has insufficient ETH balance to transfer to user");
                 (_recipient).transfer(_amountTKN);
@@ -725,12 +725,9 @@ contract CanSwap is Ownable {
      * @return string uri - Pool URI
      * @return string api - Pool API
      * @return bool active - Is pool currently active? 
-     * @return uint256 balTKN - Balance on TKN side of pool
-     * @return uint256 balCAN - Balance on CAN side of pool
-     * @return uint256 feeTKN - Unallocated fees on TKN side 
-     * @return uint256 feeCAN - Unallocated fees on CAN side
+     * @return uint8 minimum stake percentage 
      */
-    function getPool(address _pool)
+    function getPoolMeta(address _pool)
     external
     view
     poolExists(_pool)
@@ -738,16 +735,35 @@ contract CanSwap is Ownable {
         string memory uri,
         string memory api,
         bool active,
+        uint8 minimumStake
+    ) {
+        PoolDetails memory details = mapPoolDetails[_pool];
+        PoolStatus memory status = mapPoolStatus[_pool];
+        return (details.uri, details.api, status.active, mapPoolMinimumStake[_pool]); 
+    }
+
+
+    /**
+     * @dev Get pool balance for use on client
+     * @param _pool Token address of the pool
+     * @return uint256 balTKN - Balance on TKN side of pool
+     * @return uint256 balCAN - Balance on CAN side of pool
+     * @return uint256 feeTKN - Unallocated fees on TKN side 
+     * @return uint256 feeCAN - Unallocated fees on CAN side
+     */
+    function getPoolBalance(address _pool)
+    external
+    view
+    poolExists(_pool)
+    returns (
         uint256 balTKN,
         uint256 balCAN,
         uint256 feeTKN,
         uint256 feeCAN
     ) {
-        PoolDetails memory details = mapPoolDetails[_pool];
-        PoolStatus memory status = mapPoolStatus[_pool];
         PoolBalance memory balance = mapPoolBalances[_pool];
         PoolFees memory fees = mapPoolFees[_pool];
-        return (details.uri, details.api, status.active, balance.balTKN, balance.balCAN, fees.feeTKN, fees.feeCAN); 
+        return (balance.balTKN, balance.balCAN, fees.feeTKN, fees.feeCAN); 
     }
 
     /**
