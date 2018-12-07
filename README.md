@@ -6,17 +6,19 @@ The continuous liquidity pools are permissionless; anyone can add or remove liqu
 The pools rely on permissionless arbitrage to ensure correct market pricing of assets at any time. 
 
 
-## Contract overview
+## Contract implementation
   - `Solc` version `0.5.x`
   - OpenZeppelin contracts (and tests) for `Ownership`, `SafeMath`, `ERC20`
 
-### Core functionality
+### Definitions
 __*minimum staking threshold*__ - This is a pool share percentage which any prospective staker must exceed in order for her stake to be accepted.  
 
 __*pool share*__ - This is the value of a stake in respect to the total value in a pool. For example, a staker in pool with 1000 TKN1 and 500TKN2, who has staked 100 TKN1 and 250 TKN2 will have a 30% average pool share ((10% TKN1 + 50% TKN2) / 2).  
 
 __*pool fees*__ - These are service fees collected during the `swap` function (when pool users change from 1 token to the other). These fees remain *unallocated* and tied to the pool until *allocateFees* is called  
 
+
+### Core functionality
 
 #### createPoolForToken
   - Create a liquidity pool paired with CAN and perform initial stake.  
