@@ -461,9 +461,9 @@ contract CanSwap is Ownable {
     poolExists(_pool)
     onlyActiveStaker(_pool, _staker) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][_staker];
-        if(stakerRewards.rewardTKN >= 1 && stakerRewards.rewardCAN >= 1) {
-            stakerRewards.rewardTKN -= 1;
-            stakerRewards.rewardCAN -= 1;
+        if(stakerRewards.rewardTKN >= 1 || stakerRewards.rewardCAN >= 1) {
+            stakerRewards.rewardTKN = stakerRewards.rewardTKN.sub(1);
+            stakerRewards.rewardCAN = stakerRewards.rewardCAN.sub(1);
             mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(1, 1);
         }
 
@@ -532,6 +532,36 @@ contract CanSwap is Ownable {
     public 
     payable {
         _swapAndSend(_from, _to, _value, msg.sender);
+    }
+
+    /**
+     * @dev Calculate token emission from Swap function
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @return uint256 tokensEmitted - Value of tokens the swapper will receive
+     * @return uint256 feeSingleSwap - Liq fee collected in the first swap
+     * @return uint256 feeDoubleSwap - Liq fee collected in the second step of the double swap
+     */
+    function caculateSwapEmission(address _from, address _to, uint256 _value) 
+    external 
+    view
+    returns (uint256 tokensEmitted, uint256 feeSingleSwap, uint256 feeDoubleSwap) {
+        require(_value > 0, "Swap input must be non zero value");
+
+        (tokensEmitted, feeSingleSwap, feeDoubleSwap) = (0,0,0);
+        (uint256 output, uint256 liqFees) = (0,0);
+
+        if(_from == address(CAN) || _to == address(CAN)){
+            (output, liqFees) = _calculateSwapOutput(_from, _to, _value);
+            tokensEmitted = output.sub(liqFees);
+            feeSingleSwap = liqFees;
+        } else {
+            (uint256 initialOutput, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
+            feeSingleSwap = initialLiqFees;
+            (output, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialOutput.sub(initialLiqFees));
+            tokensEmitted = output.sub(feeDoubleSwap);
+        }
     }
         
     /**
@@ -604,11 +634,7 @@ contract CanSwap is Ownable {
         bool fromCan = _from == address(CAN);
         address poolId = fromCan ? _to : _from;
 
-        uint256 balFrom = _getPoolBalance(_from, fromCan);
-        uint256 balTo = _getPoolBalance(_to, !fromCan);
-        
-        uint256 output = _getOutput(_value, balFrom, balTo);
-        uint256 liqFee = _getLiqFee(_value, balFrom, balTo);
+        (uint256 output, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
 
         if(fromCan){
             mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.add(_value);
@@ -622,6 +648,28 @@ contract CanSwap is Ownable {
         
         return output.sub(liqFee);
     }
+
+    /**
+     * @dev Internal swap calculation
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @return uint256 Total output from swap
+     * @return uint256 Liquidity fee to subtract from output
+     */
+    function _calculateSwapOutput(address _from, address _to, uint256 _value)
+    private
+    view
+    returns (uint256 output, uint256 liqFee) {
+        bool fromCan = _from == address(CAN);
+
+        uint256 balFrom = _getPoolBalance(_from, fromCan);
+        uint256 balTo = _getPoolBalance(_to, !fromCan);
+        
+        output = _getOutput(_value, balFrom, balTo);
+        liqFee = _getLiqFee(_value, balFrom, balTo);
+    }
+    
 
     /**
      * @dev Get output of swap
