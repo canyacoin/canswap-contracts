@@ -41,7 +41,10 @@ contract CanSwap is Ownable {
         uint256 stakeTKN;
         uint256 stakeCAN;
     }    
-    /** @dev A stakers allocated fees in a pool */
+    /** @dev A stakers allocated fees in a pool 
+      * Rewards default to and are reset to 1 after withdrawal
+      * This lets us keep the gas costs for `allocateFees` lower and consistent
+      */
     struct PoolStakeRewards {
         uint256 rewardTKN;
         uint256 rewardCAN;
@@ -372,8 +375,10 @@ contract CanSwap is Ownable {
             if(stake.stakeTKN > 0 || stake.stakeCAN > 0){
                 (uint256 feeShareTKN, uint256 feeShareCAN) = _calculateFeeShare(initialPoolFees, poolBalance, stake);
                 PoolStakeRewards storage stakerRewards = mapPoolStakeRewards[_pool][staker];
-                stakerRewards.rewardTKN = stakerRewards.rewardTKN.add(feeShareTKN);
-                stakerRewards.rewardCAN = stakerRewards.rewardCAN.add(feeShareCAN);
+                uint256 rewardTKN = stakerRewards.rewardTKN.add(feeShareTKN);
+                stakerRewards.rewardTKN = rewardTKN == 0 ? 1 : rewardTKN;
+                uint256 rewardCAN = stakerRewards.rewardCAN.add(feeShareCAN);
+                stakerRewards.rewardCAN = rewardCAN == 0 ? 1 : rewardCAN;
             }
         }
 
@@ -456,7 +461,7 @@ contract CanSwap is Ownable {
     poolExists(_pool)
     onlyActiveStaker(_pool, _staker) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][_staker];
-        mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(0, 0);
+        mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(1, 1);
 
         PoolStake memory stakerBalance = mapPoolStakes[_pool][_staker];
         mapPoolStakes[_pool][_staker] = PoolStake(0, 0);
@@ -482,7 +487,7 @@ contract CanSwap is Ownable {
     onlyActiveStaker(_pool, msg.sender) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
         require(stakerRewards.rewardTKN > 0 || stakerRewards.rewardCAN > 0, "Pool must contain rewards for the staker");
-        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
+        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(1, 1);
         
         _executeWithdrawal(_pool, msg.sender, stakerRewards.rewardTKN, stakerRewards.rewardCAN);
 
@@ -731,6 +736,12 @@ contract CanSwap is Ownable {
     ) {
         PoolStake memory stake = mapPoolStakes[_pool][_staker];
         PoolStakeRewards memory rewards = mapPoolStakeRewards[_pool][_staker];
+        if(rewards.rewardTKN >= 1) {
+            rewards.rewardTKN.sub(1);
+        }
+        if(rewards.rewardCAN >= 1){
+            rewards.rewardCAN.sub(1);
+        }
         return (stake.stakeTKN, stake.stakeCAN, rewards.rewardTKN, rewards.rewardCAN);
     }
 }
