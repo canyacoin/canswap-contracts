@@ -375,10 +375,10 @@ contract CanSwap is Ownable {
             if(stake.stakeTKN > 0 || stake.stakeCAN > 0){
                 (uint256 feeShareTKN, uint256 feeShareCAN) = _calculateFeeShare(initialPoolFees, poolBalance, stake);
                 PoolStakeRewards storage stakerRewards = mapPoolStakeRewards[_pool][staker];
-                uint256 rewardTKN = stakerRewards.rewardTKN.add(feeShareTKN);
-                stakerRewards.rewardTKN = rewardTKN == 0 ? 1 : rewardTKN;
-                uint256 rewardCAN = stakerRewards.rewardCAN.add(feeShareCAN);
-                stakerRewards.rewardCAN = rewardCAN == 0 ? 1 : rewardCAN;
+                uint256 rewardTKN = stakerRewards.rewardTKN == 0 ? feeShareTKN.add(1) : stakerRewards.rewardTKN.add(feeShareTKN);
+                stakerRewards.rewardTKN = rewardTKN;
+                uint256 rewardCAN = stakerRewards.rewardCAN == 0 ? feeShareCAN.add(1) : stakerRewards.rewardCAN.add(feeShareCAN);
+                stakerRewards.rewardCAN = rewardCAN;
             }
         }
 
@@ -461,7 +461,11 @@ contract CanSwap is Ownable {
     poolExists(_pool)
     onlyActiveStaker(_pool, _staker) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][_staker];
-        mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(1, 1);
+        if(stakerRewards.rewardTKN >= 1 && stakerRewards.rewardCAN >= 1) {
+            stakerRewards.rewardTKN -= 1;
+            stakerRewards.rewardCAN -= 1;
+            mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(1, 1);
+        }
 
         PoolStake memory stakerBalance = mapPoolStakes[_pool][_staker];
         mapPoolStakes[_pool][_staker] = PoolStake(0, 0);
@@ -486,10 +490,10 @@ contract CanSwap is Ownable {
     poolExists(_pool)
     onlyActiveStaker(_pool, msg.sender) {
         PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
-        require(stakerRewards.rewardTKN > 0 || stakerRewards.rewardCAN > 0, "Pool must contain rewards for the staker");
+        require(stakerRewards.rewardTKN > 1 || stakerRewards.rewardCAN > 1, "Pool must contain rewards for the staker");
         mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(1, 1);
         
-        _executeWithdrawal(_pool, msg.sender, stakerRewards.rewardTKN, stakerRewards.rewardCAN);
+        _executeWithdrawal(_pool, msg.sender, stakerRewards.rewardTKN.sub(1), stakerRewards.rewardCAN.sub(1));
 
         emit eventStakerWithdrawnFeesFromPool(_pool, msg.sender);
     }
