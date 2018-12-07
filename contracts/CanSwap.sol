@@ -47,8 +47,17 @@ contract CanSwap is Ownable {
         uint256 rewardCAN;
     }
 
-    event eventCreatedPool(address indexed token, string uri, string api); 
-    event eventStake(address indexed token, uint256 amountTkn, uint256 amountCan);  
+    /** @dev Events to emit */
+    event eventPoolCreated(address indexed pool, string uri, string api); 
+    event eventPoolDetailsUpdated(address indexed pool, string uri, string api);
+    event eventPoolMinimumStakeUpdated(address indexed pool, uint8 threshold);
+    event eventPoolActivationChanged(address indexed pool, bool activated);
+    event eventStakerAddedToPool(address indexed pool, address indexed staker);  
+    event eventStakeAdded(address indexed pool, address indexed staker, uint256 amountTkn, uint256 amountCan);
+    event eventPoolFeesDistributed(address indexed pool);
+    event eventStakerWithdrawnFromPool(address indexed pool, address indexed staker);
+    event eventStakerWithdrawnFeesFromPool(address indexed pool, address indexed staker);
+    event eventSwapExecuted(address indexed fromToken, address indexed toToken, address swapper, address recipient, uint256 fromValue, uint256 toValue);
 
     /** @dev Base currency to be used across all pools */
     IERC20 public CAN;
@@ -112,7 +121,7 @@ contract CanSwap is Ownable {
     }
 
     /** 
-      * @dev Bool is staker in pool, internal
+      * @dev Bool is staker in pool with active stakes, internal
       * @param _pool Token address of the pool
       * @param _staker Address of potential staker
       * @return bool IsStaker
@@ -153,7 +162,8 @@ contract CanSwap is Ownable {
         mapPoolStatus[_token] = PoolStatus(true, true);
         mapPoolMinimumStake[_token] = 10;
         poolCount += 1;
-        emit eventCreatedPool(_token, _uri, _api);
+
+        emit eventPoolCreated(_token, _uri, _api);
 
         require(stakeInPool(_token, _amountTkn, _amountCan), "Stake must be successful");
     }
@@ -168,6 +178,7 @@ contract CanSwap is Ownable {
     poolExists(_pool)
     onlyCreatorOrOwner(_pool) {
         mapPoolDetails[_pool] = PoolDetails(_uri, _api);
+        emit eventPoolDetailsUpdated(_pool, _uri, _api);
     }
 
     /**
@@ -180,6 +191,7 @@ contract CanSwap is Ownable {
     onlyCreatorOrOwner(_pool) {
         require(_threshold >= 0 && _threshold < 100, "Threshold must be >= 0 && < 100");
         mapPoolMinimumStake[_pool] = _threshold;
+        emit eventPoolMinimumStakeUpdated(_pool, _threshold);
     }
 
     /**
@@ -192,6 +204,7 @@ contract CanSwap is Ownable {
         PoolStatus storage pool = mapPoolStatus[_pool];
         require(pool.exists && pool.active == false, "Pool must be inactive");
         pool.active = true;
+        emit eventPoolActivationChanged(_pool, true);
     }
 
     /**
@@ -204,6 +217,7 @@ contract CanSwap is Ownable {
         PoolStatus storage pool = mapPoolStatus[_pool];
         require(pool.exists && pool.active, "Pool must be active");
         pool.active = false;
+        emit eventPoolActivationChanged(_pool, false);
     }
 
 
@@ -242,11 +256,13 @@ contract CanSwap is Ownable {
             
             mapStakerPools[msg.sender][mapStakerPoolCount[msg.sender]] = _pool;
             mapStakerPoolCount[msg.sender] += 1;
+
+            emit eventStakerAddedToPool(_pool, msg.sender);
         }
 
         mapPoolStakes[_pool][msg.sender] = stake;
 
-        emit eventStake(_pool, _amountTkn, _amountCan);
+        emit eventStakeAdded(_pool, msg.sender, _amountTkn, _amountCan);
         return true;
     }
 
@@ -271,7 +287,7 @@ contract CanSwap is Ownable {
         stake.stakeTKN = stake.stakeTKN.add(_amountTkn);
         stake.stakeCAN = stake.stakeCAN.add(_amountCan);
 
-        emit eventStake(_pool, _amountTkn, _amountCan);
+        emit eventStakeAdded(_pool, msg.sender, _amountTkn, _amountCan);
         return true;
     }
 
@@ -323,8 +339,8 @@ contract CanSwap is Ownable {
     function allocateFees(address _pool)
     external
     poolExists(_pool) {
-        PoolFees memory initialPoolFees = mapPoolFees[_pool];
-        require(initialPoolFees.feeTKN > 0 || initialPoolFees.feeCAN > 0, "Pool must have some recorded fees");
+        PoolFees memory poolFees = mapPoolFees[_pool];
+        require(poolFees.feeTKN > 0 || poolFees.feeCAN > 0, "Pool must have some recorded fees");
         PoolBalance memory poolBalance = mapPoolBalances[_pool];
         require(poolBalance.balTKN > 0 || poolBalance.balCAN > 0, "Pool must have some stakes");
         _allocateFees(_pool);
@@ -360,6 +376,8 @@ contract CanSwap is Ownable {
                 stakerRewards.rewardCAN = stakerRewards.rewardCAN.add(feeShareCAN);
             }
         }
+
+        emit eventPoolFeesDistributed(_pool);
     }
 
     /**
@@ -450,6 +468,8 @@ contract CanSwap is Ownable {
         uint256 totalCAN = stakerRewards.rewardCAN.add(stakerBalance.stakeCAN);
 
         _executeWithdrawal(_pool, _staker, totalTKN, totalCAN);
+
+        emit eventStakerWithdrawnFromPool(_pool, _staker);
     }
 
     /**
@@ -465,6 +485,8 @@ contract CanSwap is Ownable {
         mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(0, 0);
         
         _executeWithdrawal(_pool, msg.sender, stakerRewards.rewardTKN, stakerRewards.rewardCAN);
+
+        emit eventStakerWithdrawnFeesFromPool(_pool, msg.sender);
     }
 
     /**
@@ -528,8 +550,7 @@ contract CanSwap is Ownable {
     function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
     private
     poolIsActiveOrBase(_from)
-    poolIsActiveOrBase(_to)
-    returns (bool success) {        
+    poolIsActiveOrBase(_to) {        
         require(_value > 0, "Must be attempting to swap a non zero amount of tokens");
 
         if(_from == address(0)){
@@ -539,26 +560,26 @@ contract CanSwap is Ownable {
             require(token.transferFrom(msg.sender, address(this), _value), "Sender must have approved the TKN transfer");
         }
 
-        uint256 swapOutput;
+        uint256 swapEmission;
 
         if(_from == address(CAN) || _to == address(CAN)){
-            swapOutput = _executeSwap(_from, _to, _value);
+            swapEmission = _executeSwap(_from, _to, _value);
         } else {
-            uint256 initialSwapOutput = _executeSwap(_from, address(CAN), _value);
-            swapOutput = _executeSwap(address(CAN), _to, initialSwapOutput);
+            uint256 initialswapEmission = _executeSwap(_from, address(CAN), _value);
+            swapEmission = _executeSwap(address(CAN), _to, initialswapEmission);
         }
 
-        require(swapOutput > 0, "Must be some swap output");
+        require(swapEmission > 0, "Must be some swap output");
 
         if(_to == address(0)) {
-            require(address(this).balance >= swapOutput, "Contract must have enough ETH to pay recipient");
-            _recipient.transfer(swapOutput);
+            require(address(this).balance >= swapEmission, "Contract must have enough ETH to pay recipient");
+            _recipient.transfer(swapEmission);
         }else {
             IERC20 outputToken = IERC20(_to);
-            require(outputToken.transfer(_recipient, swapOutput), "Contract must release tokens to recipient");
+            require(outputToken.transfer(_recipient, swapEmission), "Contract must release tokens to recipient");
         }
 
-        return true;
+        emit eventSwapExecuted(_from, _to, msg.sender, _recipient, _value, swapEmission);
     }
 
     /**
