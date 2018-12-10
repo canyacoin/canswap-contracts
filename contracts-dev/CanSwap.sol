@@ -1,684 +1,958 @@
 pragma solidity 0.5.0;
 
-// CanYaCoinToken Functions used in this contract
-contract ERC20 {
-  function transferFrom (address _from, address _to, uint256 _value) public returns (bool success);
-  function transfer (address _to, uint256 _value) public returns (bool success);
+/**
+ * @title ERC20 interface
+ * @dev see https://github.com/ethereum/EIPs/issues/20
+ */
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address who) external view returns (uint256);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function approve(address spender, uint256 value) external returns (bool);
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
 }
+/**
+ * @title Ownable
+ * @dev The Ownable contract has an owner address, and provides basic authorization control
+ * functions, this simplifies the implementation of "user permissions".
+ */
+contract Ownable {
+    address private _owner;
 
-// ERC223
-interface ContractReceiver {
-  function tokenFallback( address from, uint value, bytes calldata ) external;
-}
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
-library SafeMath {
-
-  function mul(uint256 a, uint256 b) internal pure returns (uint256) {
-    if (a == 0) {
-      return 0;
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
     }
 
-    uint256 c = a * b;
-    require(c / a == b);
-    return c;
-  }
+    /**
+     * @return the address of the owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
 
-  function div(uint256 a, uint256 b) internal pure returns (uint256) {
-    require(b > 0); // Solidity only automatically asserts when dividing by 0
-    uint256 c = a / b;
-    return c;
-  }
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner(), "function caller must be owner");
+        _;
+    }
 
-  function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-    require(b <= a);
-    uint256 c = a - b;
-    return c;
-  }
+    /**
+     * @return true if `msg.sender` is the owner of the contract.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
 
-    function add(uint256 a, uint256 b) internal pure returns (uint256) {
-        uint256 c = a + b;
-        require(c >= a);
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0), "new owner must be non zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
+/**
+ * @title SafeMath
+ * @dev Math operations with safety checks that revert on error
+ */
+library SafeMath {
+    /**
+    * @dev Multiplies two numbers, reverts on overflow.
+    */
+    function mul(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
+        // benefit is lost if 'b' is also tested.
+        // See: https://github.com/OpenZeppelin/openzeppelin-solidity/pull/522
+        if (a == 0) {
+            return 0;
+        }
+
+        uint256 c = a * b;
+        require(c / a == b, "Result of addition cannot overflow");
+
         return c;
     }
-  
+
+    /**
+    * @dev Integer division of two numbers truncating the quotient, reverts on division by zero.
+    */
+    function div(uint256 a, uint256 b) internal pure returns (uint256) {
+        // Solidity only automatically asserts when dividing by 0
+        require(b > 0, "Divisor must be non zero");
+        uint256 c = a / b;
+        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
+
+        return c;
+    }
+
+    /**
+    * @dev Subtracts two numbers, reverts on overflow (i.e. if subtrahend is greater than minuend).
+    */
+    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b <= a, "Result of subtraction cannot overflow");
+        uint256 c = a - b;
+
+        return c;
+    }
+
+    /**
+    * @dev Adds two numbers, reverts on overflow.
+    */
+    function add(uint256 a, uint256 b) internal pure returns (uint256) {
+        uint256 c = a + b;
+        require(c >= a, "Result of addition cannot overflow");
+
+        return c;
+    }
+
+    /**
+    * @dev Divides two numbers and returns the remainder (unsigned integer modulo),
+    * reverts when dividing by zero.
+    */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b != 0, "divisor cannot be 0");
+        return a % b;
+    }
 }
 
-// Owned Contract
-contract Owned {
-  modifier onlyOwner { require(msg.sender == owner); _; }
-  address public owner = msg.sender;
-  event NewOwner(address indexed old, address indexed current);
-  function setOwner(address _new) onlyOwner public { emit NewOwner(owner, _new); owner = _new; }
-}
 
+/**
+ * @title CanSwap liqudity pools
+ * @dev Continuous liquidity pools to allow on-chain conversions of
+ * tokens and ether into and out of CAN. The continuous liquidity pools are permissionless; anyone
+ * can add or remove liquidity and anyone can use the pools to convert between assets
+ * Satisfies requirements outlined in WhitePaper, with a number of technical compromises
+ * - https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf
+ */
+contract CanSwap is Ownable {
 
-// AssetSplit Contract
-contract CanSwap is Owned {
-    
     using SafeMath for uint256;
 
-    // Public Variables
-    address public addrCAN;
-    uint256 public intPools;
-    uint256 public intStakers;
-    uint256 public bal_CAN;
-    uint256 public fee_CAN;
-  
-    ERC20 public CAN20;
-  
-    // Arrays 
-    address[] public arrayTokens;     // Array of Token Addresses in all Pools
-    uint256[] public arrayCANBal;     // Array of CAN Balances in each Pool
-    uint256[] public arrayTKNBal;     // Array of Token Balances in each Pool
-    address[][] public nArrayStakes;  // Nested Array of Stakers for each Pool
-    address[][] public nArrayPools;   // Nested Array of Pools for each Staker
-  
-    // Events
-    event eventTokenEmitted(address indexed token, address indexed dest, uint256 valueTKN, uint256 liqFee);
-    event eventTokenEmittedDouble(address indexed token1, address indexed token2, 
-                                address indexed dest, uint256 TKN1, uint256 liqFee1, 
-                                uint256 TKN2, uint256 liqFee2);
-    event eventUpdatedPoolsBals(address indexed token, uint256 valueCAN, uint256 valueTKN);
-    event eventUpdatedPoolsFees(address indexed token, uint256 valueCANFee, uint256 valueTKNFee);
-    event eventCreatedPool(address indexed token, uint256 valueCAN, uint256 valueTKN); 
-    event eventStake(address indexed token, uint256 valueCAN, uint256 valueTKN, uint256 stakeAve);  
-    event eventWithdraw(address indexed token, uint256 valueCAN, uint256 valueTKN);  
-    event eventFeesDistributed(address indexed token, uint256 totalCANFees, uint256 totalTKNFees); 
-    event eventFeesDistributedTo(address indexed staker, uint256 CANFees, uint256 TKNFees); 
-    
-    // Mapping
-    mapping(address => uint256) TKNBalances_;                   // Map TKNbalances
-    mapping(address => uint256) CANBalances_;                   // Map CANbalances
-    mapping(address => uint256) TKNFees_;                       // Map TKNFeebalances
-    mapping(address => uint256) CANFees_;                       // Map CANFeebalances
-    
-    mapping(address => bool) isStaker_;                         // Map if Staking (yes/no)
-    mapping(address => bool) isPool_;                           // Map if Pool (yes/no)
-    mapping(address => bool) isBlacklisted_;                    // Map if TokenBlacklisted (yes/no)
-    mapping(address => bool) isActivated_;                      // Map if Pool Activated (yes/no)
-
-    mapping(uint256 => address) mapIndexPool_;                   // Returns the address for index
-    mapping(address => uint256) mapPoolIndex_;                   // Returns the index for address
-
-    mapping(uint256 => address) mapIndexStaker_;                 // Returns the staker from index
-    mapping(address => uint256) mapStakerIndex_;                 // Returns the index for staker
-
-    mapping(address => mapping(address => uint256)) mapStakerPoolShares_;   // Returns the unique Shares of a Pool for a staker
-    mapping(address => mapping(address => uint256)) mapPoolStakerShares_;   // Returns the unique Shares of Stakers in each pool
-
-    mapping(address => uint256) mapStakerStakes_;                           // Returns the number of unique pools a staker is in
-    mapping(address => mapping(uint256 => address)) mapStakerStakesPool_;   // Returns the pools for each Staker
-    mapping(address => uint256) mapTotalStakes_;                           // Returns the total staked for each pool
-
-    mapping(address => uint256) mapPoolStakers_;                            // Returns the number of unique stakers in a pool
-    mapping(address => mapping(uint256 => address)) mapPoolStakersStaker_;  // Returns the stakers at each index for each pool 
-    mapping(address => mapping(address => bool)) mapIfStakinginPool_;       // Map if a staker is already in a pool
-    
-    // Mapping for token resources
-    mapping(address => string) internal poolURIs_;          // Map the poolURIs to each pool
-    mapping(address => string) internal poolAPIs_;          // Map the poolAPIs to each pool   
-    
-  
-  // Construct the contract as well as the first pool (ether) 
-  constructor (address _addrCAN) public {
-        CAN20 = ERC20(_addrCAN);
-        addrCAN = _addrCAN;
-        intPools = 0;
-        bal_CAN = 0;
-        fee_CAN = 0;
-  }
-  
-    // CreateEtherPool
-  function createEtherPool(uint256 _c, uint256 _e) onlyOwner public payable {
-        require(msg.value == _e);                                       // Enforce ether tfr = value
-        require(CAN20.transferFrom(msg.sender, address(this), _c));     // TransferIn CAN
-        _createThisPool(address(0), "etherLogoURL", "etherPriceAPI", _c, _e);
-  }
-  
-    // Definition of onlyStaker modifier
-    modifier onlyStaker { 
-        isStaker_[msg.sender] = true;
-        _; 
+    /** @dev Pool meta data */
+    struct PoolDetails {
+        string uri;
+        string api;
     }
-  
-  
-  // Interface Functions
-  // The following functions are what users interact with to write to the contract
-
- 
-  // Swap Function
-  function swap(address _from, address _to, uint256 _value) public payable {
-    _swapAndSend(_from, _to, _value, msg.sender);
-  }
-      
-  // Swap and Send Function
-  function swapAndSend(address _from, address _to, uint256 _value, address payable _dest) public payable {
-    _swapAndSend(_from, _to, _value, _dest);
-  }
- 
-  // Swap and Send Internal
-  function _swapAndSend(address _from, address _to, uint256 _value, address payable _dest) internal {
-      
-          // UserInput Validations
-    require(isActivated_[_from] == true);
-    require(isActivated_[_to] == true);
-    require(_value > 0);
-    require(_dest != address(0));
-
-        // Determine if not ether (from or to address is not 0x0)
-      if(_from != address(0)){
-          if(_to != address(0)){
-            ERC20 token20 = ERC20(_from);                                         // Create ERC20 instance
-            require(token20.transferFrom(msg.sender, address(this), _value));     // TransferIn
-            _swapFunction(_from, _to, _value, _dest, false);
-          }
-          return;
-      } else {
-        require(msg.value == _value);                       // Enforce ether tfr = value
-        _swapFunction(_from, _to, _value, _dest, true);
-      } 
-  }
- 
-  
-    // CreatePool
-  function createPool(address _token, string memory _URI, string memory _API, uint256 _c, uint256 _t) public {
-      
-      // User Input Validation
-      require(isPool_[_token] == false);
-      require(_c > 0);
-      require(_t > 0);
-      
-      ERC20 token20 = ERC20(_token);                                          // Create ERC20 instance
-      require(token20.transferFrom(msg.sender, address(this), _t));           // TransferIn tokens
-      require(CAN20.transferFrom(msg.sender, address(this), _c));             // TransferIn CAN
-      
-      isPool_[_token] = true;
-      _createThisPool(_token, _URI, _API, _c, _t);
-  }
-  
-
-  
-    // UpdatePool
-  function updatePool(address _token, string memory _URI, string memory _API) public returns (bool success) {
-      require(isPool_[_token] == true);
-      _updateThisPool(_token, _URI, _API);
-      return true;
-  }
-  
-    // Stake In
-  function stakePool(address _token, uint256 _c, uint256 _t) public returns (bool success) {
-
-      require(isPool_[_token] = true);      // Only for an existing pool
-      
-      // It's ok to stake in with 0 on one side
-      if (_t != 0){
-      ERC20 token20 = ERC20(_token);                                          // Create ERC20 instance
-      require(token20.transferFrom(msg.sender, address(this), _t));           // TransferIn tokens
-      }
-      if (_c != 0){
-      require(CAN20.transferFrom(msg.sender, address(this), _c));             // TransferIn CAN
-      } 
-      
-      _checkStakers(_token);                // Check stakers 
-      _stakeInThisPool(_token, _c, _t);     // Stake
-      bal_CAN += _c;                        // Add to global balance
-     
-      return true;
-  } 
-  
-      // Stake Out
-  function withdrawAll(address _token) public returns (bool success) {
-      require(isPool_[_token] == true);
-      require(mapIfStakinginPool_[_token][msg.sender] == true);      
-      _withdrawAllFromThisPool(_token);
-      return true;
-  } 
-  
-    // DistributeFees
-  function distributeFees(address _token) public returns (bool success) {
-      require(isPool_[_token] == true);
-      _distributeFeesForPool(_token);
-      return true;
-  } 
-  
-    // Owner can Settle Pool by distibuting all shares for each staker and de-activating pool 
-    // Owner should then call distributeFees
-  function settlePool (address _token) public onlyOwner {
-      require(isPool_[_token] == true);
-      isActivated_[_token] = false;
-      //_settleThisPool(_token);
-  } 
-  
-    // Any staker can blacklist a token
-  function blacklistToken(address _token) public onlyStaker {
-      require(isPool_[_token] == true);      
-      isBlacklisted_[_token] = true;
-  } 
-
-  // Any staker can whitelist a token
-  function whitelistToken(address _token) public onlyStaker {
-      require(isPool_[_token] == true);
-      isBlacklisted_[_token] = false;
-  } 
-  
-  function deactivatePool(address _token) public onlyOwner{
-      require(isPool_[_token] == true);
-      isActivated_[_token] = false;
-  }
-  
-  // Readonly Functions
-  //
-  // 
-  
-    // Returns Balances for Pool
-    function balances() public pure returns (uint256[] memory _balances) {
-     // _balances[0] = _getCANBalance(_token);
-     //  _balances[1] = _getBalance(_token);       
-        return _balances;
+    /** @dev Pool status */
+    struct PoolStatus {
+        bool exists;
+        bool active;
     }
-  
-    // Returns Pool Price (in CAN)
-    function price(address _token) public view returns (uint256 _price) {
-        uint256 _CAN = _getCANBalance(_token);
-        uint256 _TKN = _getBalance(_token);
-        _price = _CAN.div(_TKN);
-        return _price;
-    } 
-    
-    // Returns Fees for Pool
-    function fees(address _token) public view returns (uint256[] memory _fees) {
-       _fees[0] = _getCANFee(_token);
-       _fees[1] = _getFee(_token);       
-        return _fees;
+    /** @dev Current pool balance */
+    struct PoolBalance {
+        uint256 balTKN;
+        uint256 balCAN;
     }
-
-    // Returns Stakers Share of Pool
-    function share(address _token, address _staker) public view returns (uint256 _price) {
-        // TotalStaked
-        return mapPoolStakerShares_[_token][_staker];
-    } 
-    
-    // Returns the pool for a given index
-    // @Dev can iterate from 0 to intPools to return all pools
-    function pools(uint256 _index) public view returns (address _pool) {
-        return mapIndexPool_[_index];
-    } 
-    
-    // Returns number of pools that a staker is staking in
-    // @Dev use this to return the number of pools for a staker
-    function returnStakeCount(address _staker) public view returns (uint256 _stakeCount) {
-        return mapStakerStakes_[_staker];
-    } 
-    
-    // Returns the pool for a staker
-    // @Dev can iterate from 0 to stakeCount above to return all pools for a staker
-    function returnStakers(address _staker, uint256 _stakeIndex) public view returns (address _pool) {
-        return mapStakerStakesPool_[_staker][_stakeIndex];
-    } 
-    
-    // Returns Pool Resources
-    function returnAPI(address _token) public view returns (string memory) {
-    return poolAPIs_[_token];
-    } 
-    
-    // Returns Pool Resources
-    function returnURI(address _token) public view returns (string memory) {
-    return poolURIs_[_token];
-    } 
-    
-    
-  // Internal Functions
-  
-  // Swap Function
-  function _swapFunction(address _from, address _to, uint256 _x, address payable _dest, bool isEther) internal {
-    
-    bool Single;    
-    uint256 balX;
-    uint256 balY;
-    uint256 feeY;
-    uint256 y;
-    uint256 liqFeeY;
-
-      // Firstly determine if a Single or DoubleSwap (from or to address is CAN)
-      if(_from == addrCAN){
-          if(_to == addrCAN){
-          }
-          Single = true;
-      } else {
-          if(_to == addrCAN){
-              Single = true;
-          }
-      }
-     
-        // Get balances and output Fee
-        balX = _getBalance(_from);
-        balY = _getBalance(_to);
-        feeY = _getFee(_to);
-        
-        // Get the output and liquidity fee
-        y = _getOutput(_x, balX, balY);
-        liqFeeY = _getLiqFee(_x, balX, balY);
-        
-        // Make atomic swap
-        balX = balX.add(_x);
-        balY = balY.sub(y);
-        feeY = feeY + liqFeeY;
-        
-        
-     if (Single){
-        _singleSwap(_from, _to, y, balX, balY, feeY, _dest, isEther);
-     } else {
-        _doubleSwap(_from, _to, y,  balX, balY, feeY, _dest, isEther);
-     }
-     
+    /** @dev Current accrued, unallocated pool fees */
+    struct PoolFees {
+        uint256 feeTKN;
+        uint256 feeCAN;
     }
-    
-    // SingleSwap Function
-    function _singleSwap(address _from, address _to, 
-    uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
-    address payable _dest, bool _isEther) internal{
-        
-        // Update mappings and balances
-        _updateMappings(_from, _to, _balX, _balY, _feeY);
-
-        // Send token
-        _sendToken(_dest, _isEther, _y);
-               
-        // Emit the event log
-        emit eventTokenEmitted(_to, _dest, _y, _feeY);
-    }
-    
-    // DoubleSwap Function
-    function _doubleSwap(address _from, address _to, 
-    uint256 _y, uint256 _balX, uint256 _balY, uint256 _feeY, 
-    address payable _dest, bool _isEther) internal {
-        
-        // Round2        
-        uint256 balC = _getCANBalance(_to);
-        uint256 balZ = _getBalance(_to);
-        uint256 feeZ = _getFee(_to);
-        
-        uint256 z = _getOutput(_y, balC, balZ);
-        uint256 liqFeeZ = _getLiqFee(_y, balC, balZ);     
-        
-        balC = balC.add(_y);
-        balZ = balZ.sub(z);
-        feeZ = feeZ + liqFeeZ;
-        
-        // Update mappings and balances - Pool1
-        _updateMappings(_from, _from, _balX, _balY, _feeY);
-
-        // Update mappings and balances - Pool2
-        _updateMappings(_to, _to, balC, balZ, feeZ);
-
-        // Send token
-        _sendToken(_dest, _isEther, z);
-               
-        // Emit the event log
-        emit eventTokenEmittedDouble(_from, _to, _dest, _y, _feeY, z, feeZ);
-    }
-    
-    function _getOutput(uint256 x, uint256 X, uint256 Y) private pure returns (uint256 outPut){
-        uint256 numerator = (x.mul(Y)).mul(X);
-        uint256 denom = x.add(X);
-        uint256 denominator = denom.mul(denom);
-        outPut = numerator.div(denominator);
-        return outPut;
-    }
-    
-    function _getLiqFee(uint256 x, uint256 X, uint256 Y) private pure returns (uint256 liqFee){
-        uint256 numerator = (x.mul(x)).mul(Y);
-        uint256 denom = x.add(X);
-        uint256 denominator = denom.mul(denom);
-        liqFee = numerator.div(denominator);
-        return liqFee;
-    }
-
-    function _getBalance(address _token) private view returns (uint256 _balance){
-      if(_token == addrCAN){
-        _balance = CANBalances_[_token];
-      } else {
-        _balance = TKNBalances_[_token];
-      }
-        return _balance;
-    }
-    
-    function _getCANBalance(address _token) private view returns (uint256 _balance){
-        _balance = CANBalances_[_token];
-        return _balance;
-    }
-
-    function _getFee(address _token) private view returns (uint256 _fee){
-      if(_token == addrCAN){
-        _fee = CANFees_[_token];
-      } else {
-        _fee = TKNFees_[_token];
-      }
-        return _fee;
-    }
-
-    function _getCANFee(address _token) private view returns (uint256 _fee){
-        _fee = CANFees_[_token];
-        return _fee;
-    }
-    
-    function _updateMappings(address _from, address _to, uint256 _balX, uint256 _balY, uint256 _Fee) internal{
-      if(_from == addrCAN){
-        CANBalances_[_from] = _balX;
-        TKNBalances_[_to] = _balY;
-        TKNFees_[_to] = _Fee;
-      } else {
-        TKNBalances_[_from] = _balX;
-        CANBalances_[_to] = _balY;
-        CANFees_[_to] = _Fee;
-      }
-    }
-    
-    
-    function _sendToken(address payable _dest, bool _isEther, uint256 _sendValue) internal{
-        if(_isEther){
-            // SendEther
-            _dest.transfer(_sendValue);
-        }else {
-            // Send the emission to the destination using ERC20 method
-            ERC20 poolToken = ERC20(_dest);
-            poolToken.transfer(_dest, _sendValue);
-        }
-    } 
-    
-    
-    // CreatePool
-  function _createThisPool(address _token, string memory _API, string memory _URI, uint256 _c, uint256 _t) internal {
-
-    uint256 stakerInt;
-    uint256 stakeCount;
-
-    // Track Stakers
-    if(isStaker_[msg.sender]=true){
-        stakerInt = mapStakerIndex_[msg.sender];
-        stakeCount = mapStakerStakes_[msg.sender] + 1;
-
-    }else{
-        intStakers += 1;
-        stakerInt = intStakers;
-        mapIndexStaker_[stakerInt] = msg.sender;
-        mapStakerIndex_[msg.sender] = stakerInt;
-        isStaker_[msg.sender] = true;
-    }
-    
-      bal_CAN += _c;
-      
-      // Find the Pool Share - should be 100% of Stake since a brand new pool
-      uint256 shareAve = _t;
-      
-      // Map Balances and Fees
-      CANBalances_[_token] = _c;
-      TKNBalances_[_token] = _t;
-      CANFees_[_token] = 0;
-      TKNFees_[_token] = 0;
-      
-      // Map new Pool
-      mapIndexPool_[intPools] = _token;
-      mapPoolIndex_[_token] = intPools;      
-      
-      // Map new Staker
-      mapStakerPoolShares_[msg.sender][_token] = shareAve;
-      mapPoolStakerShares_[_token][msg.sender] = shareAve;
-      mapStakerStakes_[msg.sender] = stakeCount;
-      mapPoolStakers_[_token] = 0;
-      mapPoolStakersStaker_[_token][0] = msg.sender;
-      mapTotalStakes_[_token] = _t;
- 
-      // Map Resources
-      poolURIs_[_token] = _URI;
-      poolAPIs_[_token] = _API;
-      
-      /*
-      // Add to arrays
-      arrayTokens.push(_token);
-      arrayTKNBal.push(_t);
-      arrayCANBal.push(_c);
+    /** @dev A stakers stake in a pool */
+    struct PoolStake {
+        uint256 stakeTKN;
+        uint256 stakeCAN;
+    }    
+    /** @dev A stakers allocated fees in a pool 
+      * Rewards default to and are reset to 1 after withdrawal
+      * This lets us keep the gas costs for `allocateFees` lower and consistent
       */
-
-      intPools += 1;
-            
-      emit eventCreatedPool(_token, _c, _t);
+    struct PoolStakeRewards {
+        uint256 rewardTKN;
+        uint256 rewardCAN;
     }
 
-  function _updateThisPool (address _token, string memory _URI, string memory _API) internal onlyStaker {
-      poolURIs_[_token] = _URI;
-      poolAPIs_[_token] = _API;
-  }
- 
-  function _checkStakers(address _token) internal {
-    
-    uint256 stakerInt;
-    uint256 stakeCount;
-    uint256 stakerCount;
+    /** @dev Events to emit */
+    event eventPoolCreated(address indexed pool, string uri, string api); 
+    event eventPoolDetailsUpdated(address indexed pool, string uri, string api);
+    event eventPoolMinimumStakeUpdated(address indexed pool, uint8 threshold);
+    event eventPoolActivationChanged(address indexed pool, bool activated);
+    event eventStakerAddedToPool(address indexed pool, address indexed staker);  
+    event eventStakeAdded(address indexed pool, address indexed staker, uint256 amountTkn, uint256 amountCan);
+    event eventPoolFeesDistributed(address indexed pool);
+    event eventStakerWithdrawnFromPool(address indexed pool, address indexed staker);
+    event eventStakerWithdrawnFeesFromPool(address indexed pool, address indexed staker);
+    event eventSwapExecuted(address indexed fromToken, address indexed toToken, address swapper, address recipient, uint256 fromValue, uint256 toValue);
 
-    // Track Stakers
-    if(isStaker_[msg.sender]=true){
-        stakerInt = mapStakerIndex_[msg.sender];
-        if (mapIfStakinginPool_[_token][msg.sender] == true){
-            stakeCount = mapStakerStakes_[msg.sender];
-        } else {
-            stakeCount = mapStakerStakes_[msg.sender] + 1;
-            stakerCount = mapPoolStakers_[_token] + 1;
+    /** @dev Base currency to be used across all pools */
+    IERC20 public CAN;
+
+    /** @dev Track all existing pools for use client side */
+    uint16 public poolCount = 0;
+    mapping(uint16 => address) mapIndexToPool;
+
+    /** @dev Track the pool details, fees and status */
+    mapping(address => PoolDetails) mapPoolDetails;
+    mapping(address => PoolStatus) mapPoolStatus;
+    mapping(address => PoolBalance) mapPoolBalances;
+    mapping(address => PoolFees) mapPoolFees; 
+    mapping(address => uint8) mapPoolMinimumStake; 
+
+    /** @dev Track staking activity accross the pools */
+    mapping(address => uint16) mapPoolStakerCount;
+    mapping(address => mapping(uint16 => address)) mapPoolStakerAddress;
+    mapping(address => mapping(address => PoolStake)) mapPoolStakes;
+    mapping(address => mapping(address => PoolStakeRewards)) mapPoolStakeRewards;
+
+    /** @dev Track individual stakers activity */
+    mapping(address => uint16) mapStakerPoolCount;
+    mapping(address => mapping(uint16 => address)) mapStakerPools;
+    mapping(address => mapping(address => bool)) mapStakerHasStakedInPool;
+
+    /** 
+      * @dev Constructor
+      * @param _canToken Address of the base token to be used across all pools
+      */
+    constructor (address _canToken) public {
+        CAN = IERC20(_canToken);
+    }
+
+    /** 
+      * @dev Modifier - requires pool to exist
+      * @param _token Token address used in the pool
+      */
+    modifier poolExists(address _token) {
+        require(mapPoolStatus[_token].exists, "Pool must exist");
+        _;
+    }
+
+    /** 
+      * @dev Modifier - requires pool to be active or base currency
+      * @param _token Token address used in the pool
+      */
+    modifier poolIsActiveOrBase(address _token) {
+        require(mapPoolStatus[_token].active || _token == address(CAN), "Pool must be active");
+        _;
+    }
+
+    /** 
+      * @dev Modifier - requires user to be a staker in the pool
+      * @param _pool Token address of the pool
+      * @param _staker Address of potential staker
+      */
+    modifier onlyActiveStaker(address _pool, address _staker) {
+        require(_hasStakeInPool(_pool, _staker), "User must be staker in pool");
+        _;
+    }
+
+    /** 
+      * @dev Bool is staker in pool with active stakes, internal
+      * @param _pool Token address of the pool
+      * @param _staker Address of potential staker
+      * @return bool IsStaker
+      */
+    function _hasStakeInPool(address _pool, address _staker)
+    internal 
+    view
+    returns (bool) {
+        return mapPoolStakes[_pool][_staker].stakeTKN > 0 || mapPoolStakes[_pool][_staker].stakeCAN > 0;
+    }
+
+    /** 
+      * @dev Modifier - requires user to be creator of a pool
+      * @param _pool Token address of the pool
+      */
+    modifier onlyCreatorOrOwner(address _pool) {
+        require(mapPoolStakerAddress[_pool][0] == msg.sender || isOwner(), "User must be creator of the pool");
+        _;
+    }
+
+    /**
+     * @dev Create a liquidity pool paired with CAN and perform initial stake. Requires transfer approval
+     * @param _token Token from which to create pool
+     * @param _uri URI to associate with the token pool
+     * @param _api API to associate with the token pool
+     * @param _amountTkn Initial token stake
+     * @param _amountCan Initial CanYaCoin stake
+     */
+    function createPoolForToken(address _token, string calldata _uri, string calldata _api, uint256 _amountTkn, uint256 _amountCan) 
+    external 
+    payable {
+        require(mapPoolStatus[_token].exists == false, "Pool must not exist");
+        require(_amountTkn > 0, "Must include an initial TKN stake");
+        require(_amountCan > 0, "Must include an initial CAN stake");
+        
+        mapIndexToPool[poolCount] = _token;
+        mapPoolDetails[_token] = PoolDetails(_uri, _api);
+        mapPoolStatus[_token] = PoolStatus(true, true);
+        mapPoolMinimumStake[_token] = 10;
+        poolCount += 1;
+
+        emit eventPoolCreated(_token, _uri, _api);
+
+        require(stakeInPool(_token, _amountTkn, _amountCan), "Stake must be successful");
+    }
+
+    /**
+     * @dev Update meta properties for a pool
+     * @param _uri Updated URI to associate with the token pool
+     * @param _api Updated API to associate with the token pool
+     */
+    function updatePoolDetails(address _pool, string calldata _uri, string calldata _api) 
+    external
+    poolExists(_pool)
+    onlyCreatorOrOwner(_pool) {
+        mapPoolDetails[_pool] = PoolDetails(_uri, _api);
+        emit eventPoolDetailsUpdated(_pool, _uri, _api);
+    }
+
+    /**
+     * @dev Set minimum staking threshold
+     * @param _threshold Percent of prospective pool that must be staked in order to gain access
+     */
+    function updateMinimumStakeThreshold(address _pool, uint8 _threshold) 
+    external
+    poolExists(_pool)
+    onlyCreatorOrOwner(_pool) {
+        require(_threshold >= 0 && _threshold < 100, "Threshold must be >= 0 && < 100");
+        mapPoolMinimumStake[_pool] = _threshold;
+        emit eventPoolMinimumStakeUpdated(_pool, _threshold);
+    }
+
+    /**
+     * @dev Activate the pool. Executed by contract owner
+     * @param _pool Address of token for pool
+     */
+    function activatePool(address _pool) 
+    external
+    onlyOwner() {
+        PoolStatus storage pool = mapPoolStatus[_pool];
+        require(pool.exists && pool.active == false, "Pool must be inactive");
+        pool.active = true;
+        emit eventPoolActivationChanged(_pool, true);
+    }
+
+    /**
+     * @dev De-activate the pool. Executed by contract owner
+     * @param _pool Address of token for pool
+     */
+    function deactivatePool(address _pool) 
+    external
+    onlyOwner() {
+        PoolStatus storage pool = mapPoolStatus[_pool];
+        require(pool.exists && pool.active, "Pool must be active");
+        pool.active = false;
+        emit eventPoolActivationChanged(_pool, false);
+    }
+
+
+    /**
+     * @dev Perform stake in pool. Requires transfer approval. New or returning stakers must run allocate fees
+     * @param _pool Address of token for pool
+     * @param _amountTkn Amount of tokens to stake
+     * @param _amountCan Address of CanYaCoins to stake
+     */
+    function stakeInPool(address _pool, uint256 _amountTkn, uint256 _amountCan) 
+    public
+    payable
+    poolIsActiveOrBase(_pool) 
+    returns (bool success) {
+        require(_amountTkn > 0 || _amountCan > 0, "Must include an actual stake");
+        require(_hasStakeInPool(_pool, msg.sender) == false, "User cannot already be a staker");
+        
+        PoolStake memory stake = PoolStake(_amountTkn, _amountCan);
+        PoolBalance memory existingBalance = mapPoolBalances[_pool];
+
+        if(existingBalance.balTKN > 0 || existingBalance.balCAN > 0){
+            PoolBalance memory prospectiveBalance = PoolBalance(existingBalance.balTKN.add(_amountTkn), existingBalance.balCAN.add(_amountCan));
+            uint256 prospectivePoolShare = _calculatePoolShare(prospectiveBalance, stake);
+            require(prospectivePoolShare >= mapPoolMinimumStake[_pool], "Prospective pool share must be greater than minimum threshold");
         }
-    }else{
-        intStakers += 1;
-        stakerInt = intStakers;
-        mapIndexStaker_[stakerInt] = msg.sender;
-        mapStakerIndex_[msg.sender] = stakerInt;
-        isStaker_[msg.sender] = true;
-        stakerCount = mapPoolStakers_[_token] + 1;
-    }
-      require(stakerCount < 125);     // We don't want more than 125 stakers per pool to limit complexity
-      mapStakerStakes_[msg.sender] = stakeCount;
-    
-      // Map the progressive count of stakers for this pool
-      mapPoolStakers_[_token] = stakerCount;
-      mapPoolStakersStaker_[_token][stakerCount] = msg.sender;
-  }
-  
-  
-  function _stakeInThisPool(address _token, uint256 _c, uint256 _t) internal {
-    
-      uint256 balC = _getCANBalance(_token);
-      uint256 balT = _getBalance(_token);
+
+        _allocateFees(_pool);
+        
+        _depositStakeAndUpdateBalance(_pool, _amountTkn, _amountCan);
+
+        if(mapStakerHasStakedInPool[msg.sender][_pool] == false){
+            mapPoolStakerAddress[_pool][mapPoolStakerCount[_pool]] = msg.sender;
+            mapPoolStakerCount[_pool] += 1;
+
+            mapStakerHasStakedInPool[msg.sender][_pool] = true;
             
-      uint256 C = _c.div(_c.add(balC));             // Get share of CAN side in %
-      uint256 T = _t.div(_t.add(balT));             // Get share of Token side in %
-      uint256 numer = C.add(T);                     // Add
-      uint256 stakeAve = numer.div(2);              // Get average between CAN and TKN side
-      uint256 bal_Tot = _t.add(balT);               // Get new total of Token side
-      uint256 shareAve = stakeAve.mul(bal_Tot);     // Get share of the Token side (will mirror CAN side)
-      
-      // Map
-      CANBalances_[_token] = balC.add(_c);
-      TKNBalances_[_token] = balT.add(_t);
-      
-      // Map Staker
-      mapStakerPoolShares_[msg.sender][_token] = shareAve;
-      mapPoolStakerShares_[_token][msg.sender] = shareAve;
-      
-      // Map new Token total
-      uint256 total = mapTotalStakes_[_token];
-      mapTotalStakes_[_token] = total.add(_t);         // Add the total for this pool 
-  }
- 
-  
-function _withdrawAllFromThisPool(address _token) internal onlyStaker {
-      
-    // Work out shares
-    uint256 stakerShare = mapPoolStakerShares_[_token][msg.sender];
-    uint256 balTKN = _getBalance(_token);
-    uint256 balCAN = _getCANBalance(_token);
-    
-    uint256 shares = stakerShare.div(balTKN);
-    uint256 shareCAN = shares.mul(balCAN);
-    uint256 shareTKN = shares.mul(balTKN);
-    
-    // Transfer Shares 
-    if(_token == address(0)){
-    msg.sender.transfer(shareTKN);                      // Send Ether
-    require(CAN20.transfer(msg.sender, shareCAN));      // Send CAN  
-    } else {
-    ERC20 token20 = ERC20(_token);
-    require(token20.transfer(msg.sender, shareTKN));    // Send Token
-    require(CAN20.transfer(msg.sender, shareCAN));      // Send CAN
+            mapStakerPools[msg.sender][mapStakerPoolCount[msg.sender]] = _pool;
+            mapStakerPoolCount[msg.sender] += 1;
+
+            emit eventStakerAddedToPool(_pool, msg.sender);
+        }
+
+        mapPoolStakes[_pool][msg.sender] = stake;
+
+        emit eventStakeAdded(_pool, msg.sender, _amountTkn, _amountCan);
+        return true;
     }
-    emit eventWithdraw(_token, shareCAN, shareTKN);
+
+    /**
+     * @dev Add an additional stake to a pool you stake in. Requires transfer approval
+     * @param _pool Address of token for pool
+     * @param _amountTkn Amount of tokens to add to stake
+     * @param _amountCan Address of CanYaCoins to add to stake
+     * @return bool success - Success of function execution
+     */
+    function addStakeInPool(address _pool, uint256 _amountTkn, uint256 _amountCan) 
+    public
+    payable
+    poolIsActiveOrBase(_pool)
+    onlyActiveStaker(_pool, msg.sender) 
+    returns (bool success) {
+        require(_amountTkn > 0 || _amountCan > 0, "Must include an actual stake");
+
+        _depositStakeAndUpdateBalance(_pool, _amountTkn, _amountCan);
+
+        PoolStake storage stake = mapPoolStakes[_pool][msg.sender];
+        stake.stakeTKN = stake.stakeTKN.add(_amountTkn);
+        stake.stakeCAN = stake.stakeCAN.add(_amountCan);
+
+        emit eventStakeAdded(_pool, msg.sender, _amountTkn, _amountCan);
+        return true;
+    }
+
+    /**
+     * @dev Execute value transfers and internally assign the stake deposits
+     * @param _pool Address of token for pool
+     * @param _amountTkn Amount of tokens to deposit into pool
+     * @param _amountCan Address of CanYaCoins to deposit into pool
+     */
+    function _depositStakeAndUpdateBalance(address _pool, uint256 _amountTkn, uint256 _amountCan) 
+    internal {
+        if(_pool == address(0)){
+            require(msg.value == _amountTkn, "Staker must send ETH stake");
+        } else {
+            IERC20 token = IERC20(_pool);                                          
+            require(token.transferFrom(msg.sender, address(this), _amountTkn), "Must be able to transfer tokens from pool creator to pool");    
+        }
+        require(CAN.transferFrom(msg.sender, address(this), _amountCan), "Must be able to transfer CAN from pool creator to pool");             
+        
+        PoolBalance memory currentBalance = mapPoolBalances[_pool];
+        mapPoolBalances[_pool] = PoolBalance(currentBalance.balTKN.add(_amountTkn), currentBalance.balCAN.add(_amountCan));
+    }
+
+    /**
+     * @dev Calculate the reward msg.sender can expect from re allocating the fees
+     * @param _pool Token address of the pool
+     * @return uint256 rewardTKN - How much of the accumulated TKN fees the staker will get
+     * @return uint256 rewardCAN - How much of the accumulated CAN fees the staker will get 
+     */
+    function getAllocationReward(address _pool)
+    external
+    view
+    poolExists(_pool) 
+    onlyActiveStaker(_pool, msg.sender)
+    returns (uint256 rewardTKN, uint256 rewardCAN) {
+        PoolFees memory poolFees = mapPoolFees[_pool];
+        require(poolFees.feeTKN > 0 || poolFees.feeCAN > 0, "Pool must have some recorded fees");
+
+        PoolBalance memory poolBalance = mapPoolBalances[_pool];   
+        PoolStake memory stake = mapPoolStakes[_pool][msg.sender];
+        
+        return _calculateFeeShare(poolFees, poolBalance, stake);
+    }
+
+    /**
+     * @dev Allocates fees accumulated in a pool to the stakers based on their pool share
+     * @param _pool Token address of the pool
+     */
+    function allocateFees(address _pool)
+    external
+    poolExists(_pool) {
+        PoolFees memory poolFees = mapPoolFees[_pool];
+        require(poolFees.feeTKN > 0 || poolFees.feeCAN > 0, "Pool must have some recorded fees");
+        PoolBalance memory poolBalance = mapPoolBalances[_pool];
+        require(poolBalance.balTKN > 0 || poolBalance.balCAN > 0, "Pool must have some stakes");
+        _allocateFees(_pool);
+    }
+
+    /**
+     * @dev Allocates fees accumulated in a pool to the stakers based on their pool share
+     * @param _pool Token address of the pool
+     */
+    function _allocateFees(address _pool) 
+    internal
+    poolExists(_pool) {
+
+        /** TODO
+            If we need to optimise this (allocate per token), we should: 
+            - switch to individual mappings to avoid SLOAD costs
+            - pack the structs via bitwise ops (+ optimise to uint128)
+         */ 
+
+        PoolFees memory initialPoolFees = mapPoolFees[_pool];
+        mapPoolFees[_pool] = PoolFees(0, 0);
+
+        PoolBalance memory poolBalance = mapPoolBalances[_pool];
+
+        uint16 stakerCount = mapPoolStakerCount[_pool];
+        for (uint16 i = 0; i < stakerCount; i++) {
+            address staker = mapPoolStakerAddress[_pool][i];
+            PoolStake memory stake = mapPoolStakes[_pool][staker];
+            if(stake.stakeTKN > 0 || stake.stakeCAN > 0){
+                (uint256 feeShareTKN, uint256 feeShareCAN) = _calculateFeeShare(initialPoolFees, poolBalance, stake);
+                PoolStakeRewards storage stakerRewards = mapPoolStakeRewards[_pool][staker];
+                uint256 rewardTKN = stakerRewards.rewardTKN == 0 ? feeShareTKN.add(1) : stakerRewards.rewardTKN.add(feeShareTKN);
+                stakerRewards.rewardTKN = rewardTKN;
+                uint256 rewardCAN = stakerRewards.rewardCAN == 0 ? feeShareCAN.add(1) : stakerRewards.rewardCAN.add(feeShareCAN);
+                stakerRewards.rewardCAN = rewardCAN;
+            }
+        }
+
+        emit eventPoolFeesDistributed(_pool);
+    }
+
+    /**
+     * @dev Internally calculate the share of fees for a particular staker
+     * @param _poolFees Total fees in the pool
+     * @param _poolBalance Total balance of the pool
+     * @param _stake Stakers portion of the pool balance
+     * @return uint256 feeShareTKN - How much of the accumulated TKN fees the staker will get
+     * @return uint256 feeShareCAN - How much of the accumulated CAN fees the staker will get
+     */
+    function _calculateFeeShare(PoolFees memory _poolFees, PoolBalance memory _poolBalance, PoolStake memory _stake)
+    private
+    pure
+    returns (uint256 feeShareTKN, uint256 feeShareCAN) {
+        uint256 poolShareAVG = _calculatePoolShare(_poolBalance, _stake);
+        if(poolShareAVG == 0){
+            return (0, 0);
+        }
+
+        if(_poolFees.feeTKN == 0){
+            feeShareTKN = 0;
+        } else {
+            feeShareTKN = poolShareAVG.mul(_poolFees.feeTKN).div(100);
+        }
+
+        if(_poolFees.feeCAN == 0){
+            feeShareCAN = 0;
+        } else {
+            feeShareCAN = poolShareAVG.mul(_poolFees.feeCAN).div(100);
+        }
+        return (feeShareTKN, feeShareCAN);
+    }
+
+    /**
+     * @dev Internally calculate the pool share from stake
+     * @param _poolBalance Total balance of the pool
+     * @param _stake Stakers portion of the pool balance
+     * @return uint256 - Pool share based on stake
+     */
+    function _calculatePoolShare(PoolBalance memory _poolBalance, PoolStake memory _stake)
+    private
+    pure
+    returns (uint256) {
+        (uint256 poolShareTKN, uint256 poolShareCAN) = (0, 0);
+
+        if(_stake.stakeTKN >= _poolBalance.balTKN){
+            poolShareTKN = 100;
+        } else if(_stake.stakeTKN > 0){
+            poolShareTKN = _stake.stakeTKN.mul(100).div(_poolBalance.balTKN);
+        }
+
+        if(_stake.stakeCAN >= _poolBalance.balCAN){
+            poolShareCAN = 100;
+        } else if(_stake.stakeCAN > 0){
+            poolShareCAN = _stake.stakeCAN.mul(100).div(_poolBalance.balCAN);
+        }
+        return (poolShareTKN.add(poolShareCAN)).div(2);
+    }
+
+    /**
+     * @dev Withdraw my stake and fees from the pool
+     * @param _pool Token address of the pool
+     */
+    function withdrawFromPool(address _pool)
+    external {
+        _withdrawFromPool(_pool, msg.sender);
+    }
+
+    /**
+     * @dev Withdraws a staker completely from the pool, transferring funds and resetting balances
+     * @param _pool Token address of the pool
+     * @param _staker Address of the staker to withd raw from pool
+     */
+    function _withdrawFromPool(address _pool, address payable _staker) 
+    internal
+    poolExists(_pool)
+    onlyActiveStaker(_pool, _staker) {
+        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][_staker];
+        if(stakerRewards.rewardTKN >= 1 || stakerRewards.rewardCAN >= 1) {
+            stakerRewards.rewardTKN = stakerRewards.rewardTKN.sub(1);
+            stakerRewards.rewardCAN = stakerRewards.rewardCAN.sub(1);
+            mapPoolStakeRewards[_pool][_staker] = PoolStakeRewards(1, 1);
+        }
+
+        PoolStake memory stakerBalance = mapPoolStakes[_pool][_staker];
+        mapPoolStakes[_pool][_staker] = PoolStake(0, 0);
+
+        PoolBalance memory currentPoolBalance = mapPoolBalances[_pool];
+        mapPoolBalances[_pool] = PoolBalance(currentPoolBalance.balTKN.sub(stakerBalance.stakeTKN), currentPoolBalance.balCAN.sub(stakerBalance.stakeCAN));
+
+        uint256 totalTKN = stakerRewards.rewardTKN.add(stakerBalance.stakeTKN);
+        uint256 totalCAN = stakerRewards.rewardCAN.add(stakerBalance.stakeCAN);
+
+        _executeWithdrawal(_pool, _staker, totalTKN, totalCAN);
+
+        emit eventStakerWithdrawnFromPool(_pool, _staker);
+    }
+
+    /**
+     * @dev Withdraws an active stakers accumulated fees for a particular pool
+     * @param _pool Token address of the pool
+     */
+    function withdrawFees(address _pool) 
+    external
+    poolExists(_pool)
+    onlyActiveStaker(_pool, msg.sender) {
+        PoolStakeRewards memory stakerRewards = mapPoolStakeRewards[_pool][msg.sender];
+        require(stakerRewards.rewardTKN > 1 || stakerRewards.rewardCAN > 1, "Pool must contain rewards for the staker");
+        mapPoolStakeRewards[_pool][msg.sender] = PoolStakeRewards(1, 1);
+        
+        _executeWithdrawal(_pool, msg.sender, stakerRewards.rewardTKN.sub(1), stakerRewards.rewardCAN.sub(1));
+
+        emit eventStakerWithdrawnFeesFromPool(_pool, msg.sender);
+    }
+
+    /**
+     * @dev Internal execution of releasing funds to the staker
+     * @param _pool Token address of the pool
+     * @param _recipient Address to which to send the funds
+     * @param _amountTKN Token amount to be sent
+     * @param _amountCAN CAN amount to be sent
+     */
+    function _executeWithdrawal(address _pool, address payable _recipient, uint256 _amountTKN, uint256 _amountCAN)
+    private {
+        if(_amountTKN > 0){
+            if(_pool == address(0)){
+                require(address(this).balance >= _amountTKN, "Pool has insufficient ETH balance to transfer to user");
+                (_recipient).transfer(_amountTKN);
+            } else {
+                IERC20 token = IERC20(_pool);                                          
+                require(token.transfer(_recipient, _amountTKN), "Pool has insufficient TKN balance to transfer to user");    
+            }
+        }
+
+        if(_amountCAN > 0){
+            require(CAN.transfer(_recipient, _amountCAN), "Pool has insufficient CAN to transfer to staker");
+        }
+    }
+
+    /**
+     * @dev Perform swap and return funds to sender
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     */
+    function swap(address _from, address _to, uint256 _value) 
+    public 
+    payable {
+        _swapAndSend(_from, _to, _value, msg.sender);
+    }
+
+    /**
+     * @dev Calculate token emission from Swap function
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @return uint256 tokensEmitted - Value of tokens the swapper will receive
+     * @return uint256 feeSingleSwap - Liq fee collected in the first swap
+     * @return uint256 feeDoubleSwap - Liq fee collected in the second step of the double swap
+     */
+    function caculateSwapEmission(address _from, address _to, uint256 _value) 
+    external 
+    view
+    returns (uint256 tokensEmitted, uint256 feeSingleSwap, uint256 feeDoubleSwap) {
+        require(_value > 0, "Swap input must be non zero value");
+
+        (tokensEmitted, feeSingleSwap, feeDoubleSwap) = (0,0,0);
+        (uint256 output, uint256 liqFees) = (0,0);
+
+        if(_from == address(CAN) || _to == address(CAN)){
+            (output, liqFees) = _calculateSwapOutput(_from, _to, _value);
+            tokensEmitted = output.sub(liqFees);
+            feeSingleSwap = liqFees;
+        } else {
+            (uint256 initialOutput, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
+            feeSingleSwap = initialLiqFees;
+            (output, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialOutput.sub(initialLiqFees));
+            tokensEmitted = output.sub(feeDoubleSwap);
+        }
+    }
+        
+    /**
+     * @dev Perform swap and return funds to recipient
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @param _recipient Address that the output funds will be sent to
+     */
+    function swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
+    public 
+    payable {
+        require(_recipient != address(0), "Recipient must be non empty address");
+        _swapAndSend(_from, _to, _value, _recipient);
+    }
     
-    // Balances
-    CANBalances_[_token] = balCAN.sub(shareCAN);
-    TKNBalances_[_token] = balTKN.sub(shareTKN);
+    /**
+     * @dev Internal swap and transfer function
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @param _recipient Address that the output funds will be sent to
+     * @return bool Success of the swap
+     */
+    function _swapAndSend(address _from, address _to, uint256 _value, address payable _recipient) 
+    private
+    poolIsActiveOrBase(_from)
+    poolIsActiveOrBase(_to) {        
+        require(_value > 0, "Must be attempting to swap a non zero amount of tokens");
+
+        if(_from == address(0)){
+            require(msg.value == _value, "Sender must send ETH as payment");
+        } else {
+            IERC20 token = IERC20(_from);                                        
+            require(token.transferFrom(msg.sender, address(this), _value), "Sender must have approved the TKN transfer");
+        }
+
+        uint256 swapEmission;
+
+        if(_from == address(CAN) || _to == address(CAN)){
+            swapEmission = _executeSwap(_from, _to, _value);
+        } else {
+            uint256 initialswapEmission = _executeSwap(_from, address(CAN), _value);
+            swapEmission = _executeSwap(address(CAN), _to, initialswapEmission);
+        }
+
+        require(swapEmission > 0, "Must be some swap output");
+
+        if(_to == address(0)) {
+            require(address(this).balance >= swapEmission, "Contract must have enough ETH to pay recipient");
+            _recipient.transfer(swapEmission);
+        }else {
+            IERC20 outputToken = IERC20(_to);
+            require(outputToken.transfer(_recipient, swapEmission), "Contract must release tokens to recipient");
+        }
+
+        emit eventSwapExecuted(_from, _to, msg.sender, _recipient, _value, swapEmission);
+    }
+
+    /**
+     * @dev Internal swap execution
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @return uint256 Amount of tokens to emit from the swap
+     */
+    function _executeSwap(address _from, address _to, uint256 _value)
+    private
+    returns (uint256 tokensToEmit) {
+        bool fromCan = _from == address(CAN);
+        address poolId = fromCan ? _to : _from;
+
+        (uint256 output, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
+
+        if(fromCan){
+            mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.add(_value);
+            mapPoolBalances[poolId].balTKN = mapPoolBalances[poolId].balTKN.sub(output);
+            mapPoolFees[poolId].feeTKN = mapPoolFees[poolId].feeTKN.add(liqFee);
+        } else {
+            mapPoolBalances[poolId].balTKN = mapPoolBalances[poolId].balTKN.add(_value);
+            mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.sub(output);
+            mapPoolFees[poolId].feeCAN = mapPoolFees[poolId].feeCAN.add(liqFee);
+        }
+        
+        return output.sub(liqFee);
+    }
+
+    /**
+     * @dev Internal swap calculation
+     * @param _from Token to swap from
+     * @param _to Token the user will receive as output
+     * @param _value Amount of _from token used as deposit
+     * @return uint256 Total output from swap
+     * @return uint256 Liquidity fee to subtract from output
+     */
+    function _calculateSwapOutput(address _from, address _to, uint256 _value)
+    private
+    view
+    returns (uint256 output, uint256 liqFee) {
+        bool fromCan = _from == address(CAN);
+
+        uint256 balFrom = _getPoolBalance(_from, fromCan);
+        uint256 balTo = _getPoolBalance(_to, !fromCan);
+        
+        output = _getOutput(_value, balFrom, balTo);
+        liqFee = _getLiqFee(_value, balFrom, balTo);
+    }
     
-    // Map Staker
-    mapStakerPoolShares_[msg.sender][_token] = 0;
-    mapPoolStakerShares_[_token][msg.sender] = 0;
-    
-    // Map new Token total
-    uint256 total = mapTotalStakes_[_token];
-    mapTotalStakes_[_token] = total.sub(stakerShare);   // Remove the stakerShare from the total
-      
-  }
-  
-  function _distributeFeesForPool(address _pool) internal onlyStaker {
-   
-   uint256 stakeCount = mapPoolStakers_[_pool];
-   
-   for (uint i = 0; i < stakeCount; ++i){
-       uint160 addr = uint160(mapPoolStakersStaker_[_pool][i]);
-       address payable staker = address(addr);
-       _iterateOverPool(_pool, staker);
-   } 
-   
-    // Balances
-    CANFees_[_pool] = 0;
-    TKNFees_[_pool] = 0;
+
+    /**
+     * @dev Get output of swap
+     * @param _input Value of input
+     * @param _inputBal Balance of input in pool
+     * @param _outputBal Balance of output in pool
+     * @return uint256 Output of the swap
+     */
+    function _getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    private 
+    pure 
+    returns (uint256 outPut) {
+        uint256 numerator = (_input.mul(_outputBal)).mul(_inputBal);
+        uint256 denom = _input.add(_inputBal);
+        denom = denom.mul(denom);
+        return numerator.div(denom);
+    }
+
+    /**
+     * @dev Get liquidity fee from swap
+     * @param _input Value of input
+     * @param _inputBal Balance of input in pool
+     * @param _outputBal Balance of output in pool
+     * @return uint256 Liquidity fee of the swap
+     */
+    function _getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    private 
+    pure 
+    returns (uint256 liqFee) {
+        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
+        uint256 denom = _input.add(_inputBal);
+        denom = denom.mul(denom);
+        return numerator.div(denom);
+    }
+
+    /**
+     * @dev Internal func to get balance of one side of pool
+     * @param _pool Token address of the pool
+     * @param _base Bool - get base currency balance (CAN)?
+     * @return uint256 Balance on this side of the pool
+     */
+    function _getPoolBalance(address _pool, bool _base)
+    private
+    view
+    returns (uint256 _balance) {
+        return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
+    }
+
+
+    /**
+     * @dev Get pool details for use on client
+     * @param _pool Token address of the pool
+     * @return string uri - Pool URI
+     * @return string api - Pool API
+     * @return bool active - Is pool currently active? 
+     * @return uint8 minimum stake percentage 
+     */
+    function getPoolMeta(address _pool)
+    external
+    view
+    poolExists(_pool)
+    returns (
+        string memory uri,
+        string memory api,
+        bool active,
+        uint8 minimumStake
+    ) {
+        PoolDetails memory details = mapPoolDetails[_pool];
+        PoolStatus memory status = mapPoolStatus[_pool];
+        return (details.uri, details.api, status.active, mapPoolMinimumStake[_pool]); 
+    }
+
+
+    /**
+     * @dev Get pool balance for use on client
+     * @param _pool Token address of the pool
+     * @return uint256 balTKN - Balance on TKN side of pool
+     * @return uint256 balCAN - Balance on CAN side of pool
+     * @return uint256 feeTKN - Unallocated fees on TKN side 
+     * @return uint256 feeCAN - Unallocated fees on CAN side
+     */
+    function getPoolBalance(address _pool)
+    external
+    view
+    poolExists(_pool)
+    returns (
+        uint256 balTKN,
+        uint256 balCAN,
+        uint256 feeTKN,
+        uint256 feeCAN
+    ) {
+        PoolBalance memory balance = mapPoolBalances[_pool];
+        PoolFees memory fees = mapPoolFees[_pool];
+        return (balance.balTKN, balance.balCAN, fees.feeTKN, fees.feeCAN); 
+    }
+
+    /**
+     * @dev Get a list of pools the staker is associated with
+     * @param _staker Staker address
+     * @return address[] Pool addresses
+     */
+    function getStakersPools(address _staker)
+    external
+    view
+    returns (address[] memory pools) {
+        uint16 stakerPoolCount = mapStakerPoolCount[_staker];
+        pools = new address[](stakerPoolCount);
+        for(uint16 i = 0; i < stakerPoolCount; i++){
+            pools[i] = mapStakerPools[_staker][i];
+        }
+        return pools;
+    }
+
+    /**
+     * @dev Get stakers stake in a particular pool
+     * @param _pool Token address of the pool
+     * @param _staker Staker address
+     * @return uint256 Stake in TKN side of pool
+     * @return uint256 Stake in CAN side of pool
+     * @return uint256 Rewards allocated in TKN side of pool
+     * @return uint256 Rewards allocated in CAN side of pool
+     */
+    function getStakersStake(address _pool, address _staker)
+    external
+    view
+    onlyActiveStaker(_pool, _staker)
+    returns (
+        uint256 stakeTKN,
+        uint256 stakeCAN,
+        uint256 rewardTKN,
+        uint256 rewardCAN
+    ) {
+        PoolStake memory stake = mapPoolStakes[_pool][_staker];
+        PoolStakeRewards memory rewards = mapPoolStakeRewards[_pool][_staker];
+        if(rewards.rewardTKN >= 1) {
+            rewards.rewardTKN.sub(1);
+        }
+        if(rewards.rewardCAN >= 1){
+            rewards.rewardCAN.sub(1);
+        }
+        return (stake.stakeTKN, stake.stakeCAN, rewards.rewardTKN, rewards.rewardCAN);
+    }
 }
 
-  function _iterateOverPool(address _token, address payable _staker) internal {
-   
-    // Work out shares
-    uint256 stakerShare = mapPoolStakerShares_[_token][_staker];
-    uint256 balTKNFee = _getFee(_token);
-    uint256 balCANFee = _getCANFee(_token);
-    
-    uint256 shares = stakerShare.div(balTKNFee);
-    uint256 shareCANFee = shares.mul(balCANFee);
-    uint256 shareTKNFee = shares.mul(balTKNFee);
-     
-    // Transfer Shares 
-    if(_token == address(0)){
-    _staker.transfer(shareTKNFee);             // Send Ether
-    require(CAN20.transfer(_staker, shareCANFee));      // Send CAN  
-    } else {
-    ERC20 token20 = ERC20(_token);
-    require(token20.transfer(_staker, shareTKNFee));    // Send Token
-    require(CAN20.transfer(_staker, shareCANFee));      // Send CAN
-    }
-    emit eventFeesDistributedTo(_token, shareCANFee, shareTKNFee);
-  }
-}
