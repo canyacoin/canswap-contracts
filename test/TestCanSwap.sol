@@ -21,20 +21,21 @@ contract TestCanSwap {
      * Set the state for all the tests
      */
     function beforeAll() public {
-        _can = new ERC20DetailedMock("CanYaCoin", "CAN", 18, 100000000 * 10**18, address(this));
         _tkn = new ERC20DetailedMock("Token", "TKN", 18, 1000000 * 10**18, address(this));
+        _can = new ERC20DetailedMock("CanYaCoin", "CAN", 6, 100000000 * 10**6, address(this));
         _canSwap = new CanSwap(address(_can));
     }
 
+
     /**
-     * 
+     * Create a pool and check that the stake has been transferred correctly
      */
     function testPoolFeesApplied() public {
         uint256 initialBalanceTkn = _tkn.balanceOf(address(_canSwap));
         uint256 initialBalanceCan = _can.balanceOf(address(_canSwap));
         
-        uint256 amtTkn = 1 * 10**18;
-        uint256 amtCan = 100 * 10**18;
+        uint256 amtTkn = 1000 * 10**18;
+        uint256 amtCan = 10000000 * 10**6;
 
         _tkn.approve(address(_canSwap), amtTkn);
         _can.approve(address(_canSwap), amtCan);
@@ -44,4 +45,25 @@ contract TestCanSwap {
         Assert.equal(_tkn.balanceOf(address(_canSwap)), initialBalanceTkn.add(amtTkn), "TKN must be transferred to pool");
         Assert.equal(_can.balanceOf(address(_canSwap)), initialBalanceCan.add(amtCan), "CAN must be transferred to pool");
     }
+
+        /**
+     * Attempt to swap from CAN to TKN
+     */
+    function testBasicSwapAndSend() public {    
+
+        // uint256 amtTkn = 1000 * 10**18;
+        // uint256 amtCan = 10000000 * 10**6;
+
+        // _tkn.approve(address(_canSwap), amtTkn);
+        // _can.approve(address(_canSwap), amtCan);
+        
+        // _canSwap.createPoolForToken(address(_tkn), "uri", "api", amtTkn, amtCan);
+
+        uint256 amtCan2 = 10000 * 10**6;
+
+        _tkn.approve(address(_canSwap), amtCan2);
+        
+        // _canSwap.swap(address(_can), address(_tkn), amtCan2);
+    }
+
 }
