@@ -61,7 +61,7 @@ contract TestCanSwap {
 
         uint256 amtCan2 = 10000 * 10**6;
 
-        _tkn.approve(address(_canSwap), amtCan2);
+        _can.approve(address(_canSwap), amtCan2);
         
         // _canSwap.swap(address(_can), address(_tkn), amtCan2);
     }
