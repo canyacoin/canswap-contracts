@@ -699,7 +699,7 @@ contract CanSwap is Ownable {
     private 
     pure 
     returns (uint256) {
-        uint256 numerator = _input.mul(_input).mul(_outputBal);
+        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
         uint256 denom = _input.add(_inputBal);
         denom = denom.mul(denom);
         return numerator.div(denom);
