@@ -13,7 +13,6 @@ installed_contracts/*
 build/*
 bin/*
 .editorconfig
-.vscode*
 
 # VS live sharing
 .vs/*
