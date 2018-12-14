@@ -1,4 +1,4 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.1;
 
 /**
  * @title ERC20 interface
@@ -144,7 +144,6 @@ library SafeMath {
         return a % b;
     }
 }
-
 
 /**
  * @title CanSwap liqudity pools
@@ -772,7 +771,7 @@ contract CanSwap is Ownable {
      */
     function _executeSwap(address _from, address _to, uint256 _value)
     private
-    returns (uint256 tokensToEmit) {
+    returns (uint256) {
         bool fromCan = _from == address(CAN);
         address poolId = fromCan ? _to : _from;
 
@@ -804,9 +803,10 @@ contract CanSwap is Ownable {
     view
     returns (uint256 output, uint256 liqFee) {
         bool fromCan = _from == address(CAN);
+        address pool = fromCan ? _to : _from;
 
-        uint256 balFrom = _getPoolBalance(_from, fromCan);
-        uint256 balTo = _getPoolBalance(_to, !fromCan);
+        uint256 balFrom = _getPoolBalance(pool, fromCan);
+        uint256 balTo = _getPoolBalance(pool, !fromCan);
         
         output = _getOutput(_value, balFrom, balTo);
         liqFee = _getLiqFee(_value, balFrom, balTo);
@@ -819,14 +819,13 @@ contract CanSwap is Ownable {
      * @param _inputBal Balance of input in pool
      * @param _outputBal Balance of output in pool
      * @return uint256 Output of the swap
-     */
+     */ 
     function _getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
     private 
     pure 
-    returns (uint256 outPut) {
-        uint256 numerator = (_input.mul(_outputBal)).mul(_inputBal);
+    returns (uint256) {
+        uint256 numerator = _input.mul(_outputBal);
         uint256 denom = _input.add(_inputBal);
-        denom = denom.mul(denom);
         return numerator.div(denom);
     }
 
@@ -840,8 +839,8 @@ contract CanSwap is Ownable {
     function _getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
     private 
     pure 
-    returns (uint256 liqFee) {
-        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
+    returns (uint256) {
+        uint256 numerator = _input.mul(_input).mul(_outputBal);
         uint256 denom = _input.add(_inputBal);
         denom = denom.mul(denom);
         return numerator.div(denom);
@@ -856,7 +855,7 @@ contract CanSwap is Ownable {
     function _getPoolBalance(address _pool, bool _base)
     private
     view
-    returns (uint256 _balance) {
+    returns (uint256) {
         return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
     }
 
@@ -870,7 +869,7 @@ contract CanSwap is Ownable {
      * @return uint8 minimum stake percentage 
      */
     function getPoolMeta(address _pool)
-    external
+    public
     view
     poolExists(_pool)
     returns (
@@ -884,6 +883,23 @@ contract CanSwap is Ownable {
         return (details.uri, details.api, status.active, mapPoolMinimumStake[_pool]); 
     }
 
+    /**
+     * @dev Get pool details for use on client
+     * @param _poolId of the pool
+     */
+    function getPoolMeta(uint16 _poolId)
+    external
+    view
+    returns (
+        string memory uri,
+        string memory api,
+        bool active,
+        uint8 minimumStake
+    ) {
+        address pool = mapIndexToPool[_poolId];
+        return getPoolMeta(pool); 
+    }
+
 
     /**
      * @dev Get pool balance for use on client
@@ -894,7 +910,7 @@ contract CanSwap is Ownable {
      * @return uint256 feeCAN - Unallocated fees on CAN side
      */
     function getPoolBalance(address _pool)
-    external
+    public
     view
     poolExists(_pool)
     returns (
@@ -906,6 +922,23 @@ contract CanSwap is Ownable {
         PoolBalance memory balance = mapPoolBalances[_pool];
         PoolFees memory fees = mapPoolFees[_pool];
         return (balance.balTKN, balance.balCAN, fees.feeTKN, fees.feeCAN); 
+    }
+
+    /**
+     * @dev Get pool balance for use on client
+     * @param _poolId of the pool
+     */
+    function getPoolBalance(uint16 _poolId)
+    external
+    view
+    returns (
+        uint256 balTKN,
+        uint256 balCAN,
+        uint256 feeTKN,
+        uint256 feeCAN
+    ) {
+        address pool = mapIndexToPool[_poolId];
+        return getPoolBalance(pool); 
     }
 
     /**

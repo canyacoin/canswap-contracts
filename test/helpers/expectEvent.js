@@ -1,6 +1,6 @@
 const SolidityEvent = require('web3/lib/web3/event.js');
 
-const BigNumber = require('bignumber.js');;
+const BigNumber = require('bignumber.js');
 const should = require('chai')
   .use(require('chai-bignumber')(BigNumber))
   .should();

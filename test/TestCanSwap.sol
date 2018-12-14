@@ -1,4 +1,4 @@
-pragma solidity 0.5.0;
+pragma solidity 0.5.1;
 
 import "truffle/Assert.sol";
 import "truffle/DeployedAddresses.sol";
@@ -49,21 +49,21 @@ contract TestCanSwap {
         /**
      * Attempt to swap from CAN to TKN
      */
-    function testBasicSwapAndSend() public {    
+    // function testBasicSwapAndSend() public {    
 
-        // uint256 amtTkn = 1000 * 10**18;
-        // uint256 amtCan = 10000000 * 10**6;
+    //     uint256 amtTkn = 1000 * 10**18;
+    //     uint256 amtCan = 10000000 * 10**6;
 
-        // _tkn.approve(address(_canSwap), amtTkn);
-        // _can.approve(address(_canSwap), amtCan);
+    //     _tkn.approve(address(_canSwap), amtTkn);
+    //     _can.approve(address(_canSwap), amtCan);
         
-        // _canSwap.createPoolForToken(address(_tkn), "uri", "api", amtTkn, amtCan);
+    //     _canSwap.createPoolForToken(address(_tkn), "uri", "api", amtTkn, amtCan);
 
-        uint256 amtCan2 = 10000 * 10**6;
+    //     uint256 amtCan2 = 1 * 10**6;
 
-        _can.approve(address(_canSwap), amtCan2);
+    //     _tkn.approve(address(_canSwap), amtCan2);
         
-        // _canSwap.swap(address(_can), address(_tkn), amtCan2);
-    }
+    //     _canSwap.swap(address(_can), address(_tkn), amtCan2);
+    // }
 
 }
