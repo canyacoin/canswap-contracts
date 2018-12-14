@@ -8,19 +8,19 @@ library CanSwapMath {
 
     /**
      * @dev Internal swap calculation
-     * @param _balFrom Balance of token to swap from
-     * @param _balTo Balance of token to swap to
-     * @param _value Amount of _from token used as deposit
+     * @param _input Amount of _from token used as deposit
+     * @param _inputBal Balance of token to swap from
+     * @param _outputBal Balance of token to swap to
      * @return uint256 Total output from swap
      * @return uint256 Emission from the swap
      * @return uint256 Liquidity fee to subtract from output
      */
-    function calculateSwapOutput(uint256 _balFrom, uint256 _balTo, uint256 _value)
+    function calculateSwapOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal)
     public
     pure
     returns (uint256 output, uint256 emission, uint256 liqFee) {        
-        output = getOutput(_value, _balFrom, _balTo);
-        liqFee = getLiqFee(_value, _balFrom, _balTo);
+        output = getOutput(_input, _inputBal, _outputBal);
+        liqFee = getLiqFee(_input, _inputBal, _outputBal);
         emission = output.sub(liqFee);
     }
     
@@ -52,7 +52,8 @@ library CanSwapMath {
     public 
     pure 
     returns (uint256) {
-        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
+        uint256 numerator = _input.mul(_input);
+        numerator = numerator.mul(_outputBal);
         uint256 denom = _input.add(_inputBal);
         denom = denom.mul(denom);
         return numerator.div(denom);

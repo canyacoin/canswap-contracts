@@ -4,11 +4,11 @@ import "../CanSwapMath.sol";
 
 contract CanSwapMathMock {
 
-    function calculateSwapOutput(uint256 _balFrom, uint256 _balTo, uint256 _value)
+    function calculateSwapOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal)
     public
     pure
     returns (uint256 output, uint256 emission, uint256 liqFee) {        
-        return CanSwapMath.calculateSwapOutput(_balFrom, _balTo, _value);
+        return CanSwapMath.calculateSwapOutput(_input, _inputBal, _outputBal);
     }
     
 

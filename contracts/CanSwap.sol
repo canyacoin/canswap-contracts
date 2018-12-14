@@ -667,7 +667,7 @@ contract CanSwap is Ownable {
         uint256 balFrom = _getPoolBalance(pool, fromCan);
         uint256 balTo = _getPoolBalance(pool, !fromCan);
         
-        return CanSwapMath.calculateSwapOutput(balFrom, balTo, _value);
+        return CanSwapMath.calculateSwapOutput(_value, balFrom, balTo);
     }
     
 
