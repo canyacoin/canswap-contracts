@@ -1,8 +1,8 @@
 pragma solidity 0.5.0;
 
 import "./Ownable.sol";
-import "./SafeMath.sol";
 import "./IERC20.sol";
+import { SafeMath, CanSwapMath } from "./CanSwapMath.sol";
 
 /**
  * @title CanSwap liqudity pools
@@ -550,17 +550,17 @@ contract CanSwap is Ownable {
         require(_value > 0, "Swap input must be non zero value");
 
         (tokensEmitted, feeSingleSwap, feeDoubleSwap) = (0,0,0);
-        (uint256 output, uint256 liqFees) = (0,0);
+        (uint256 emission, uint256 liqFees) = (0,0);
 
         if(_from == address(CAN) || _to == address(CAN)){
-            (output, liqFees) = _calculateSwapOutput(_from, _to, _value);
-            tokensEmitted = output.sub(liqFees);
+            ( , emission, liqFees) = _calculateSwapOutput(_from, _to, _value);
+            tokensEmitted = emission;
             feeSingleSwap = liqFees;
         } else {
-            (uint256 initialOutput, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
+            ( , uint256 initialEmission, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
             feeSingleSwap = initialLiqFees;
-            (output, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialOutput.sub(initialLiqFees));
-            tokensEmitted = output.sub(feeDoubleSwap);
+            ( , emission, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialEmission);
+            tokensEmitted = emission;
         }
     }
         
@@ -634,7 +634,7 @@ contract CanSwap is Ownable {
         bool fromCan = _from == address(CAN);
         address poolId = fromCan ? _to : _from;
 
-        (uint256 output, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
+        (uint256 output, uint256 emission, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
 
         if(fromCan){
             mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.add(_value);
@@ -646,7 +646,7 @@ contract CanSwap is Ownable {
             mapPoolFees[poolId].feeCAN = mapPoolFees[poolId].feeCAN.add(liqFee);
         }
         
-        return output.sub(liqFee);
+        return emission;
     }
 
     /**
@@ -660,50 +660,16 @@ contract CanSwap is Ownable {
     function _calculateSwapOutput(address _from, address _to, uint256 _value)
     private
     view
-    returns (uint256 output, uint256 liqFee) {
+    returns (uint256 output, uint256 emission, uint256 liqFee) {
         bool fromCan = _from == address(CAN);
         address pool = fromCan ? _to : _from;
 
         uint256 balFrom = _getPoolBalance(pool, fromCan);
         uint256 balTo = _getPoolBalance(pool, !fromCan);
         
-        output = _getOutput(_value, balFrom, balTo);
-        liqFee = _getLiqFee(_value, balFrom, balTo);
+        return CanSwapMath.calculateSwapOutput(balFrom, balTo, _value);
     }
     
-
-    /**
-     * @dev Get output of swap
-     * @param _input Value of input
-     * @param _inputBal Balance of input in pool
-     * @param _outputBal Balance of output in pool
-     * @return uint256 Output of the swap
-     */ 
-    function _getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
-    private 
-    pure 
-    returns (uint256) {
-        uint256 numerator = _input.mul(_outputBal);
-        uint256 denom = _input.add(_inputBal);
-        return numerator.div(denom);
-    }
-
-    /**
-     * @dev Get liquidity fee from swap
-     * @param _input Value of input
-     * @param _inputBal Balance of input in pool
-     * @param _outputBal Balance of output in pool
-     * @return uint256 Liquidity fee of the swap
-     */
-    function _getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
-    private 
-    pure 
-    returns (uint256) {
-        uint256 numerator = (_input.mul(_input)).mul(_outputBal);
-        uint256 denom = _input.add(_inputBal);
-        denom = denom.mul(denom);
-        return numerator.div(denom);
-    }
 
     /**
      * @dev Internal func to get balance of one side of pool
