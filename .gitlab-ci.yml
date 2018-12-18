@@ -6,7 +6,7 @@ variables:
 before_script:
   - cd $APP_PATH
   - npm install
-  - ganache-cli -p 8545 > /dev/null &
+  - ganache-cli -p 8545 --gasLimit=0x1fffffffffffff > /dev/null &
   - sleep 5
 
 stages:
