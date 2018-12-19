@@ -1,87 +1,6 @@
 pragma solidity 0.5.1;
 
 /**
- * @title ERC20 interface
- * @dev see https://github.com/ethereum/EIPs/issues/20
- */
-interface IERC20 {
-    function totalSupply() external view returns (uint256);
-
-    function balanceOf(address who) external view returns (uint256);
-
-    function allowance(address owner, address spender) external view returns (uint256);
-
-    function transfer(address to, uint256 value) external returns (bool);
-
-    function approve(address spender, uint256 value) external returns (bool);
-
-    function transferFrom(address from, address to, uint256 value) external returns (bool);
-
-    event Transfer(address indexed from, address indexed to, uint256 value);
-
-    event Approval(address indexed owner, address indexed spender, uint256 value);
-}
-/**
- * @title Ownable
- * @dev The Ownable contract has an owner address, and provides basic authorization control
- * functions, this simplifies the implementation of "user permissions".
- */
-contract Ownable {
-    address private _owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    /**
-     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
-     * account.
-     */
-    constructor () internal {
-        _owner = msg.sender;
-        emit OwnershipTransferred(address(0), _owner);
-    }
-
-    /**
-     * @return the address of the owner.
-     */
-    function owner() public view returns (address) {
-        return _owner;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(isOwner(), "function caller must be owner");
-        _;
-    }
-
-    /**
-     * @return true if `msg.sender` is the owner of the contract.
-     */
-    function isOwner() public view returns (bool) {
-        return msg.sender == _owner;
-    }
-
-    /**
-     * @dev Allows the current owner to transfer control of the contract to a newOwner.
-     * @param newOwner The address to transfer ownership to.
-     */
-    function transferOwnership(address newOwner) public onlyOwner {
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers control of the contract to a newOwner.
-     * @param newOwner The address to transfer ownership to.
-     */
-    function _transferOwnership(address newOwner) internal {
-        require(newOwner != address(0), "new owner must be non zero address");
-        emit OwnershipTransferred(_owner, newOwner);
-        _owner = newOwner;
-    }
-}
-
-/**
  * @title SafeMath
  * @dev Math operations with safety checks that revert on error
  */
@@ -142,6 +61,146 @@ library SafeMath {
     function mod(uint256 a, uint256 b) internal pure returns (uint256) {
         require(b != 0, "divisor cannot be 0");
         return a % b;
+    }
+}
+
+/**
+ * @title ERC20 interface
+ * @dev see https://github.com/ethereum/EIPs/issues/20
+ */
+interface IERC20 {
+    function totalSupply() external view returns (uint256);
+
+    function balanceOf(address who) external view returns (uint256);
+
+    function allowance(address owner, address spender) external view returns (uint256);
+
+    function transfer(address to, uint256 value) external returns (bool);
+
+    function approve(address spender, uint256 value) external returns (bool);
+
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+}
+
+/**
+ * @title Ownable
+ * @dev The Ownable contract has an owner address, and provides basic authorization control
+ * functions, this simplifies the implementation of "user permissions".
+ */
+contract Ownable {
+    address private _owner;
+
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+
+    /**
+     * @dev The Ownable constructor sets the original `owner` of the contract to the sender
+     * account.
+     */
+    constructor () internal {
+        _owner = msg.sender;
+        emit OwnershipTransferred(address(0), _owner);
+    }
+
+    /**
+     * @return the address of the owner.
+     */
+    function owner() public view returns (address) {
+        return _owner;
+    }
+
+    /**
+     * @dev Throws if called by any account other than the owner.
+     */
+    modifier onlyOwner() {
+        require(isOwner(), "function caller must be owner");
+        _;
+    }
+
+    /**
+     * @return true if `msg.sender` is the owner of the contract.
+     */
+    function isOwner() public view returns (bool) {
+        return msg.sender == _owner;
+    }
+
+    /**
+     * @dev Allows the current owner to transfer control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function transferOwnership(address newOwner) public onlyOwner {
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers control of the contract to a newOwner.
+     * @param newOwner The address to transfer ownership to.
+     */
+    function _transferOwnership(address newOwner) internal {
+        require(newOwner != address(0), "new owner must be non zero address");
+        emit OwnershipTransferred(_owner, newOwner);
+        _owner = newOwner;
+    }
+}
+
+library CanSwapMath {
+
+    using SafeMath for uint256;
+
+    /**
+     * @dev Internal swap calculation
+     * @param _input Amount of _from token used as deposit
+     * @param _inputBal Balance of token to swap from
+     * @param _outputBal Balance of token to swap to
+     * @return uint256 Total output from swap
+     * @return uint256 Emission from the swap
+     * @return uint256 Liquidity fee to subtract from output
+     */
+    function calculateSwapOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal)
+    public
+    pure
+    returns (uint256 output, uint256 emission, uint256 liqFee) {        
+        output = getOutput(_input, _inputBal, _outputBal);
+        liqFee = getLiqFee(_input, _inputBal, _outputBal);
+        emission = output.sub(liqFee);
+    }
+    
+
+    /**
+     * @dev Get output of swap
+     * @param _input Value of input
+     * @param _inputBal Balance of input in pool
+     * @param _outputBal Balance of output in pool
+     * @return uint256 Output of the swap
+     */ 
+    function getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    public 
+    pure 
+    returns (uint256) {
+        uint256 numerator = _input.mul(_outputBal);
+        uint256 denom = _input.add(_inputBal);
+        return numerator.div(denom);
+    }
+
+    /**
+     * @dev Get liquidity fee from swap
+     * @param _input Value of input
+     * @param _inputBal Balance of input in pool
+     * @param _outputBal Balance of output in pool
+     * @return uint256 Liquidity fee of the swap
+     */
+    function getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
+    public 
+    pure 
+    returns (uint256) {
+        uint256 numerator = _input.mul(_input);
+        numerator = numerator.mul(_outputBal);
+        uint256 denom = _input.add(_inputBal);
+        denom = denom.mul(denom);
+        return numerator.div(denom);
     }
 }
 
@@ -691,17 +750,17 @@ contract CanSwap is Ownable {
         require(_value > 0, "Swap input must be non zero value");
 
         (tokensEmitted, feeSingleSwap, feeDoubleSwap) = (0,0,0);
-        (uint256 output, uint256 liqFees) = (0,0);
+        (uint256 emission, uint256 liqFees) = (0,0);
 
         if(_from == address(CAN) || _to == address(CAN)){
-            (output, liqFees) = _calculateSwapOutput(_from, _to, _value);
-            tokensEmitted = output.sub(liqFees);
+            ( , emission, liqFees) = _calculateSwapOutput(_from, _to, _value);
+            tokensEmitted = emission;
             feeSingleSwap = liqFees;
         } else {
-            (uint256 initialOutput, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
+            ( , uint256 initialEmission, uint256 initialLiqFees) = _calculateSwapOutput(_from, address(CAN), _value);
             feeSingleSwap = initialLiqFees;
-            (output, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialOutput.sub(initialLiqFees));
-            tokensEmitted = output.sub(feeDoubleSwap);
+            ( , emission, feeDoubleSwap) = _calculateSwapOutput(address(CAN), _to, initialEmission);
+            tokensEmitted = emission;
         }
     }
         
@@ -775,7 +834,7 @@ contract CanSwap is Ownable {
         bool fromCan = _from == address(CAN);
         address poolId = fromCan ? _to : _from;
 
-        (uint256 output, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
+        (uint256 output, uint256 emission, uint256 liqFee) = _calculateSwapOutput(_from, _to, _value);
 
         if(fromCan){
             mapPoolBalances[poolId].balCAN = mapPoolBalances[poolId].balCAN.add(_value);
@@ -787,7 +846,7 @@ contract CanSwap is Ownable {
             mapPoolFees[poolId].feeCAN = mapPoolFees[poolId].feeCAN.add(liqFee);
         }
         
-        return output.sub(liqFee);
+        return emission;
     }
 
     /**
@@ -801,50 +860,16 @@ contract CanSwap is Ownable {
     function _calculateSwapOutput(address _from, address _to, uint256 _value)
     private
     view
-    returns (uint256 output, uint256 liqFee) {
+    returns (uint256 output, uint256 emission, uint256 liqFee) {
         bool fromCan = _from == address(CAN);
         address pool = fromCan ? _to : _from;
 
         uint256 balFrom = _getPoolBalance(pool, fromCan);
         uint256 balTo = _getPoolBalance(pool, !fromCan);
         
-        output = _getOutput(_value, balFrom, balTo);
-        liqFee = _getLiqFee(_value, balFrom, balTo);
+        return CanSwapMath.calculateSwapOutput(_value, balFrom, balTo);
     }
     
-
-    /**
-     * @dev Get output of swap
-     * @param _input Value of input
-     * @param _inputBal Balance of input in pool
-     * @param _outputBal Balance of output in pool
-     * @return uint256 Output of the swap
-     */ 
-    function _getOutput(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
-    private 
-    pure 
-    returns (uint256) {
-        uint256 numerator = _input.mul(_outputBal);
-        uint256 denom = _input.add(_inputBal);
-        return numerator.div(denom);
-    }
-
-    /**
-     * @dev Get liquidity fee from swap
-     * @param _input Value of input
-     * @param _inputBal Balance of input in pool
-     * @param _outputBal Balance of output in pool
-     * @return uint256 Liquidity fee of the swap
-     */
-    function _getLiqFee(uint256 _input, uint256 _inputBal, uint256 _outputBal) 
-    private 
-    pure 
-    returns (uint256) {
-        uint256 numerator = _input.mul(_input).mul(_outputBal);
-        uint256 denom = _input.add(_inputBal);
-        denom = denom.mul(denom);
-        return numerator.div(denom);
-    }
 
     /**
      * @dev Internal func to get balance of one side of pool
@@ -855,7 +880,7 @@ contract CanSwap is Ownable {
     function _getPoolBalance(address _pool, bool _base)
     private
     view
-    returns (uint256) {
+    returns (uint256 _balance) {
         return _base ? mapPoolBalances[_pool].balCAN : mapPoolBalances[_pool].balTKN;
     }
 
