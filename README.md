@@ -62,8 +62,12 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
   - `getStakersStake` returns (stakeTKN, stakeCAN, allocated rewardTKN, allocated rewardCAN)
 
 ## Test procedure
- - Unit tests do xxxxxxxxxxxx
- - Coverage provides xxxxxxxxxxx
+- Unit tests do xxxxxxxxxxxx
+- Coverage provides xxxxxxxxxxx
+
+### Migrations
+- Truffle migrations provided in this repo are used to simulate deployment specifically for testing
+- Use ZeppelinOS for deploying to mainnet and managing upgrades
 
 ### CI
  - Tests auto execute via Gitlab CI (`.gitlab-ci.yml`) using the following commands 
@@ -77,11 +81,11 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
 ```
 
 ## Limitations
- - Allocate fees must be called intermittently in order to optimise staker rewards
- - Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
+- Allocate fees must be called intermittently in order to optimise staker rewards
+- Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
 
 ## Run locally
- - Migrations do xxxxxxxxxxxx
+
 
 ## Resources
 :page_with_curl: [Whitepaper](https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf)

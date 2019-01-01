@@ -1,8 +1,10 @@
 var CanSwap = artifacts.require("./CanSwap.sol");
 var CanSwapMath = artifacts.require("./CanSwapMath.sol");
 
-module.exports = function(deployer) {
-  deployer.deploy(CanSwapMath);
-  deployer.link(CanSwapMath, CanSwap);
-  deployer.deploy(CanSwap, "0xdD460A903488c988f2F092fEE7c3CC22254b5264");
+module.exports = async (deployer) => {
+  await deployer.deploy(CanSwapMath);
+  await deployer.link(CanSwapMath, CanSwap);
+  await deployer.deploy(CanSwap);
+  canSwapDeployed = await CanSwap.deployed();
+  await canSwapDeployed.initialize("0xe05d0af11a8dd899a1e2a766d3f4d50c0396effc");
 };

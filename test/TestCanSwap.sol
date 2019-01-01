@@ -23,7 +23,8 @@ contract TestCanSwap {
     function beforeEach() public {
         _tkn = new ERC20DetailedMock("Token", "TKN", 18, 1000000 * 10**18, address(this));
         _can = new ERC20DetailedMock("CanYaCoin", "CAN", 6, 100000000 * 10**6, address(this));
-        _canSwap = new CanSwap(address(_can));
+        _canSwap = new CanSwap();
+        _canSwap.initialize(address(_can));
     }
 
     /**

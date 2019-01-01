@@ -1,0 +1,11 @@
+{
+  "zosversion": "2",
+  "name": "CanSwap",
+  "version": "0.1.0",
+  "contracts": {
+    "CanSwap": "CanSwap"
+  },
+  "dependencies": {
+    "openzeppelin-eth": "^2.0.2"
+  }
+}
