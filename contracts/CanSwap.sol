@@ -3,7 +3,6 @@ pragma solidity 0.5.1;
 import { Ownable } from "./Ownable.sol";
 import "./IERC20.sol";
 import { SafeMath, CanSwapMath } from "./CanSwapMath.sol";
-import "./Initializable.sol";
 
 /**
  * @title CanSwap liqudity pools
@@ -89,11 +88,10 @@ contract CanSwap is Ownable {
     mapping(address => mapping(address => bool)) mapStakerHasStakedInPool;
 
     /** 
-      * @dev Constructor
-      * @param _canToken Address of the base token to be used across all pools
-      */
-
-    function initialize(address _canToken) initializer public {
+     * @dev Constructor
+     * @param _canToken Address of the base token to be used across all pools
+     */
+    function initialize(address _canToken) public initializer {
         Ownable.initialize(msg.sender);
 
         CAN = IERC20(_canToken);

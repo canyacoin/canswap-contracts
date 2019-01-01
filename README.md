@@ -95,6 +95,15 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
 
 ### Deploying locally
 - As per [docs](https://docs.zeppelinos.org/docs/deploying.html) do...
+- `npm i -g zos ganache-cli truffle`
+- another terminal -> `ganache-cli -p 8545 --gasLimit=0x1fffffffffffff` (grab available account [9])
+- `truffle compile` (Freshly compiles the existing contracts ready for deployment/upgrading)
+- `zos session --network development --from <account[9]> --expires 3600` (Starts session from which to execute the tx)
+- `zos add CanSwap --skip-compile` (Add compiled CanSwap contract to `zos.json`)
+- `zos push --skip-compile` (Deploys __static__ contract to chosen network for use with upgradeable instances)
+- another terminal -> `truffle migrate` and grab address for `CanYaCoin`
+- `zos create CanSwap --init initialize --args <CanYaCoin address>`
+- Now see `proxy` address and `implementation` address in the `zos.xxx.json` file for interacting with
 
 
 ### Upgrading on Ropsten/Mainnet

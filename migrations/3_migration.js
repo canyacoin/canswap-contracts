@@ -1,10 +1,21 @@
 var CanSwap = artifacts.require("./CanSwap.sol");
+var ERC20DetailedMock = artifacts.require("./mocks/ERC20DetailedMock.sol");
 var CanSwapMath = artifacts.require("./CanSwapMath.sol");
 
-module.exports = async (deployer) => {
+const BigNumber = web3.utils.BN;
+
+getBN = (val, dec) => {
+  return new BigNumber((val * 10**dec).toString(16), 16);
+}
+
+module.exports = async (deployer, network, accounts) => {
+
+  await deployer.deploy(ERC20DetailedMock, "CanYaCoin", "CAN", 18, getBN(100000000, 18), accounts[0]);
+  canYaCoinDeployed = await ERC20DetailedMock.deployed();
+
   await deployer.deploy(CanSwapMath);
   await deployer.link(CanSwapMath, CanSwap);
   await deployer.deploy(CanSwap);
   canSwapDeployed = await CanSwap.deployed();
-  await canSwapDeployed.initialize("0xe05d0af11a8dd899a1e2a766d3f4d50c0396effc");
+  await canSwapDeployed.initialize(canYaCoinDeployed.address);
 };
