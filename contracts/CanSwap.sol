@@ -1,6 +1,6 @@
 pragma solidity 0.5.1;
 
-import "./Ownable.sol";
+import { Ownable } from "./Ownable.sol";
 import "./IERC20.sol";
 import { SafeMath, CanSwapMath } from "./CanSwapMath.sol";
 import "./Initializable.sol";
@@ -13,7 +13,7 @@ import "./Initializable.sol";
  * Satisfies requirements outlined in WhitePaper, with a number of technical compromises
  * - https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf
  */
-contract CanSwap is Ownable, Initializable {
+contract CanSwap is Ownable {
 
     using SafeMath for uint256;
 
@@ -94,6 +94,8 @@ contract CanSwap is Ownable, Initializable {
       */
 
     function initialize(address _canToken) initializer public {
+        Ownable.initialize(msg.sender);
+
         CAN = IERC20(_canToken);
         poolCount = 0;
     }

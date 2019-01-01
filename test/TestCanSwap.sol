@@ -20,7 +20,7 @@ contract TestCanSwap {
     /**
      * Set the state for all the tests
      */
-    function beforeEach() public {
+    function beforeAll() public {
         _tkn = new ERC20DetailedMock("Token", "TKN", 18, 1000000 * 10**18, address(this));
         _can = new ERC20DetailedMock("CanYaCoin", "CAN", 6, 100000000 * 10**6, address(this));
         _canSwap = new CanSwap();
@@ -30,7 +30,7 @@ contract TestCanSwap {
     /**
      * Create a pool and check that the stake has been transferred correctly
      */
-    function testPoolFeesApplied() public {
+    function testPoolFeesApplied() public {        
         uint256 initialBalanceTkn = _tkn.balanceOf(address(_canSwap));
         uint256 initialBalanceCan = _can.balanceOf(address(_canSwap));
         

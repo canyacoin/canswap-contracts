@@ -84,7 +84,21 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
 - Allocate fees must be called intermittently in order to optimise staker rewards
 - Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
 
-## Run locally
+## Deploying
+
+### ZOS
+- Uses [ZeppelinOS](https://docs.zeppelinos.org/docs) to provide proxied upgradability
+- View current versions at the `zos.xxx.json` files
+
+#### Limitations
+- Implemented local version of `Ownable` and `Initializable` due to current lack of support for solc `0.5.x`
+
+### Deploying locally
+- As per [docs](https://docs.zeppelinos.org/docs/deploying.html) do...
+
+
+### Upgrading on Ropsten/Mainnet
+- As per [docs](https://docs.zeppelinos.org/docs/upgrading.html) do...
 
 
 ## Resources
