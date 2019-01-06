@@ -62,8 +62,12 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
   - `getStakersStake` returns (stakeTKN, stakeCAN, allocated rewardTKN, allocated rewardCAN)
 
 ## Test procedure
- - Unit tests do xxxxxxxxxxxx
- - Coverage provides xxxxxxxxxxx
+- Unit tests do xxxxxxxxxxxx
+- Coverage provides xxxxxxxxxxx
+
+### Migrations
+- Truffle migrations provided in this repo are used to simulate deployment specifically for testing
+- Use ZeppelinOS for deploying to mainnet and managing upgrades
 
 ### CI
  - Tests auto execute via Gitlab CI (`.gitlab-ci.yml`) using the following commands 
@@ -77,11 +81,34 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
 ```
 
 ## Limitations
- - Allocate fees must be called intermittently in order to optimise staker rewards
- - Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
+- Allocate fees must be called intermittently in order to optimise staker rewards
+- Upper limit on number of stakers allowed in each pool due to the gas usage involved in allocating fees
 
-## Run locally
- - Migrations do xxxxxxxxxxxx
+## Deploying
+
+### ZOS
+- Uses [ZeppelinOS](https://docs.zeppelinos.org/docs) to provide proxied upgradability
+- View current versions at the `zos.xxx.json` files
+
+#### Limitations
+- Implemented local version of `Ownable` and `Initializable` due to current lack of support for solc `0.5.x`
+
+### Deploying locally
+- As per [docs](https://docs.zeppelinos.org/docs/deploying.html) do...
+- `npm i -g zos ganache-cli truffle`
+- another terminal -> `ganache-cli -p 8545 --gasLimit=0x1fffffffffffff` (grab available account [9])
+- `truffle compile` (Freshly compiles the existing contracts ready for deployment/upgrading)
+- `zos session --network development --from <account[9]> --expires 3600` (Starts session from which to execute the tx)
+- `zos add CanSwap --skip-compile` (Add compiled CanSwap contract to `zos.json`)
+- `zos push --skip-compile` (Deploys __static__ contract to chosen network for use with upgradeable instances)
+- another terminal -> `truffle migrate` and grab address for `CanYaCoin`
+- `zos create CanSwap --init initialize --args <CanYaCoin address>`
+- Now see `proxy` address and `implementation` address in the `zos.xxx.json` file for interacting with
+
+
+### Upgrading on Ropsten/Mainnet
+- As per [docs](https://docs.zeppelinos.org/docs/upgrading.html) do...
+
 
 ## Resources
 :page_with_curl: [Whitepaper](https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf)

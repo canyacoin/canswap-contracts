@@ -20,7 +20,8 @@ module.exports = {
     development: {
       host: 'localhost',
       port: 8545,
-      gas: 6130000,
+      gasPrice: 0x1,
+      gas: 0x1fffffffffff,
       network_id: '*'
     }
   },
@@ -28,6 +29,11 @@ module.exports = {
     optimizer: {
       enabled: true,
       runs: 200
+    }
+  },
+  compilers: {
+    solc: {
+      version: "0.5.1"
     }
   }
 };

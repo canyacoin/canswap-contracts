@@ -66,7 +66,7 @@ contract ERC20 is IERC20 {
      * @param value The amount of tokens to be spent.
      */
     function approve(address spender, uint256 value) public returns (bool) {
-        require(spender != address(0));
+        require(spender != address(0), "Spender cannot be empty address");
 
         _allowed[msg.sender][spender] = value;
         emit Approval(msg.sender, spender, value);
