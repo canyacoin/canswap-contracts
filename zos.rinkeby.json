@@ -1,11 +1,11 @@
 {
   "contracts": {
     "CanSwap": {
-      "address": "0xfb88be76ff2b9d0543c2627d35ab8b2f57102d03",
-      "constructorCode": "608060405234801561001057600080fd5b5061450a806100206000396000f3fe",
-      "bodyBytecodeHash": "268582d73bff94fb16453b2dc93378162c30d0fff9473c9fd8967a15da9d151c",
-      "localBytecodeHash": "08aa65b449e746b9ccd3657c5ce6fe8d455904bb344aaeb5814a6798eefc12a1",
-      "deployedBytecodeHash": "29ee5ea5a460df28a0e9449c036005d61f8b7086f272f4a5145cc15e5e00860c",
+      "address": "0x88dc1e8deef3542ce8011cd7c53c184aa557c038",
+      "constructorCode": "608060405234801561001057600080fd5b50614542806100206000396000f3fe",
+      "bodyBytecodeHash": "0caa8dd4e40fdf2cc861ab4f515a891e6458df8e3f5c748cd858ab28b97503ef",
+      "localBytecodeHash": "f523b4f8da0dfc1f056f1c2a79b505c5ff87ea423f8ae62b5c9a989651664d31",
+      "deployedBytecodeHash": "d664efb08174cb053f8c98cc33fb698450959b2edcb2f74fe09bbdc553323cff",
       "types": {
         "t_bool": {
           "id": "t_bool",
@@ -224,7 +224,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "initialized",
-          "astId": 2528,
+          "astId": 2536,
           "type": "t_bool",
           "src": "754:24:3"
         },
@@ -232,7 +232,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "initializing",
-          "astId": 2530,
+          "astId": 2538,
           "type": "t_bool",
           "src": "879:25:3"
         },
@@ -240,7 +240,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "______gap",
-          "astId": 2579,
+          "astId": 2587,
           "type": "t_array:50<t_uint256>",
           "src": "2006:29:3"
         },
@@ -248,7 +248,7 @@
           "contract": "Ownable",
           "path": "contracts/Ownable.sol",
           "label": "_owner",
-          "astId": 2644,
+          "astId": 2652,
           "type": "t_address",
           "src": "286:22:5"
         },
@@ -378,7 +378,58 @@
         "hasSelfDestruct": false,
         "hasDelegateCall": false,
         "hasInitialValuesInDeclarations": false,
-        "uninitializedBaseContracts": []
+        "uninitializedBaseContracts": [],
+        "storageUncheckedVars": [
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolDetails",
+            "astId": 128,
+            "type": "t_mapping<t_struct<CanSwap.PoolDetails>>",
+            "src": "2753:46:0"
+          },
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolStatus",
+            "astId": 132,
+            "type": "t_mapping<t_struct<CanSwap.PoolStatus>>",
+            "src": "2805:44:0"
+          },
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolBalances",
+            "astId": 136,
+            "type": "t_mapping<t_struct<CanSwap.PoolBalance>>",
+            "src": "2855:47:0"
+          },
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolFees",
+            "astId": 140,
+            "type": "t_mapping<t_struct<CanSwap.PoolFees>>",
+            "src": "2908:40:0"
+          },
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolStakes",
+            "astId": 160,
+            "type": "t_mapping<t_struct<CanSwap.PoolStake>>",
+            "src": "3189:63:0"
+          },
+          {
+            "contract": "CanSwap",
+            "path": "contracts/CanSwap.sol",
+            "label": "mapPoolStakeRewards",
+            "astId": 166,
+            "type": "t_mapping<t_struct<CanSwap.PoolStakeRewards>>",
+            "src": "3258:76:0"
+          }
+        ],
+        "storageDiff": []
       }
     }
   },
@@ -396,7 +447,7 @@
       {
         "address": "0x3e9ef596a38e0c1b9a3cbc1ba62e3d33ff71dba6",
         "version": "0.1.0",
-        "implementation": "0xfb88be76ff2b9d0543c2627d35ab8b2f57102d03"
+        "implementation": "0x88dc1e8deef3542ce8011cd7c53c184aa557c038"
       }
     ]
   },
