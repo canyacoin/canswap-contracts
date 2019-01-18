@@ -1,11 +1,11 @@
 {
   "contracts": {
     "CanSwap": {
-      "address": "0x88dc1e8deef3542ce8011cd7c53c184aa557c038",
-      "constructorCode": "608060405234801561001057600080fd5b50614542806100206000396000f3fe",
-      "bodyBytecodeHash": "0caa8dd4e40fdf2cc861ab4f515a891e6458df8e3f5c748cd858ab28b97503ef",
-      "localBytecodeHash": "f523b4f8da0dfc1f056f1c2a79b505c5ff87ea423f8ae62b5c9a989651664d31",
-      "deployedBytecodeHash": "d664efb08174cb053f8c98cc33fb698450959b2edcb2f74fe09bbdc553323cff",
+      "address": "0xb1cf06e0054c630fb3d63c26d9843a535e8d26dc",
+      "constructorCode": "608060405234801561001057600080fd5b5061450a806100206000396000f3fe",
+      "bodyBytecodeHash": "ce737b778456dfc1ed143debfb731fdb0e5a75855379e3f99a19d6629696bbdb",
+      "localBytecodeHash": "08aa65b449e746b9ccd3657c5ce6fe8d455904bb344aaeb5814a6798eefc12a1",
+      "deployedBytecodeHash": "8f6d3e488831ddbf31a3a054303510dbe9b55443e5e71201d4c0bf9e7694c9f8",
       "types": {
         "t_bool": {
           "id": "t_bool",
@@ -224,7 +224,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "initialized",
-          "astId": 2536,
+          "astId": 2528,
           "type": "t_bool",
           "src": "754:24:3"
         },
@@ -232,7 +232,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "initializing",
-          "astId": 2538,
+          "astId": 2530,
           "type": "t_bool",
           "src": "879:25:3"
         },
@@ -240,7 +240,7 @@
           "contract": "Initializable",
           "path": "contracts/Initializable.sol",
           "label": "______gap",
-          "astId": 2587,
+          "astId": 2579,
           "type": "t_array:50<t_uint256>",
           "src": "2006:29:3"
         },
@@ -248,7 +248,7 @@
           "contract": "Ownable",
           "path": "contracts/Ownable.sol",
           "label": "_owner",
-          "astId": 2652,
+          "astId": 2644,
           "type": "t_address",
           "src": "286:22:5"
         },
@@ -378,64 +378,13 @@
         "hasSelfDestruct": false,
         "hasDelegateCall": false,
         "hasInitialValuesInDeclarations": false,
-        "uninitializedBaseContracts": [],
-        "storageUncheckedVars": [
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolDetails",
-            "astId": 128,
-            "type": "t_mapping<t_struct<CanSwap.PoolDetails>>",
-            "src": "2753:46:0"
-          },
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolStatus",
-            "astId": 132,
-            "type": "t_mapping<t_struct<CanSwap.PoolStatus>>",
-            "src": "2805:44:0"
-          },
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolBalances",
-            "astId": 136,
-            "type": "t_mapping<t_struct<CanSwap.PoolBalance>>",
-            "src": "2855:47:0"
-          },
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolFees",
-            "astId": 140,
-            "type": "t_mapping<t_struct<CanSwap.PoolFees>>",
-            "src": "2908:40:0"
-          },
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolStakes",
-            "astId": 160,
-            "type": "t_mapping<t_struct<CanSwap.PoolStake>>",
-            "src": "3189:63:0"
-          },
-          {
-            "contract": "CanSwap",
-            "path": "contracts/CanSwap.sol",
-            "label": "mapPoolStakeRewards",
-            "astId": 166,
-            "type": "t_mapping<t_struct<CanSwap.PoolStakeRewards>>",
-            "src": "3258:76:0"
-          }
-        ],
-        "storageDiff": []
+        "uninitializedBaseContracts": []
       }
     }
   },
   "solidityLibs": {
     "CanSwapMath": {
-      "address": "0xdc9b202830c65af680d5db3e06dea26eac989823",
+      "address": "0x5f9679f7d7d7623948f360d11cbe00168fc88102",
       "constructorCode": "61042b610030600b82828239805160001a6073146000811461002057610022565bfe5b5030600052607381538281f3fe",
       "bodyBytecodeHash": "3277aa5aeb7e9b791c374e4344b0102817ec354d8ca156d1d4eddff89fd7444f",
       "localBytecodeHash": "4a3e98ecbdc298f42bca8446e0e7bde017e3edf1c00ab8283d398b4fad1fc452",
@@ -445,9 +394,9 @@
   "proxies": {
     "CanSwap/CanSwap": [
       {
-        "address": "0x3e9ef596a38e0c1b9a3cbc1ba62e3d33ff71dba6",
+        "address": "0xcb005dc0bd266e2ff4a3d416dc51c292a7e297fb",
         "version": "0.1.0",
-        "implementation": "0x88dc1e8deef3542ce8011cd7c53c184aa557c038"
+        "implementation": "0xb1cf06e0054c630fb3d63c26d9843a535e8d26dc"
       }
     ]
   },
