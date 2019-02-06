@@ -1,4 +1,4 @@
-pragma solidity 0.5.1;
+pragma solidity ^0.5.1;
 
 import { Ownable } from "./Ownable.sol";
 import "./IERC20.sol";
@@ -719,13 +719,14 @@ contract CanSwap is Ownable {
     external
     view
     returns (
+        address token,
         string memory uri,
         string memory api,
         bool active,
         uint8 minimumStake
-    ) {
-        address pool = mapIndexToPool[_poolId];
-        return getPoolMeta(pool); 
+    ) {          
+        token = mapIndexToPool[_poolId];
+        (uri, api, active, minimumStake) = getPoolMeta(token);
     }
 
 
@@ -753,37 +754,51 @@ contract CanSwap is Ownable {
     }
 
     /**
-     * @dev Get pool balance for use on client
-     * @param _poolId of the pool
+     * @dev Get pool balances for use on client
      */
-    function getPoolBalance(uint16 _poolId)
+    function getPoolBalances()
     external
     view
     returns (
-        uint256 balTKN,
-        uint256 balCAN,
-        uint256 feeTKN,
-        uint256 feeCAN
+        address[] memory token,
+        bool[] memory active,
+        uint256[] memory balTKN,
+        uint256[] memory balCAN,
+        uint256[] memory feeTKN,
+        uint256[] memory feeCAN
     ) {
-        address pool = mapIndexToPool[_poolId];
-        return getPoolBalance(pool); 
+        for(uint16 i = 0; i < poolCount; i++){
+          token[i] = mapIndexToPool[i];
+          PoolStatus memory status = mapPoolStatus[_pool];
+          active[i] = status.active;
+          (balTKN[i], balCAN[i], feeTKN[i], feeCAN[i]) = getPoolBalance(token[i]);
+        }
     }
 
     /**
      * @dev Get a list of pools the staker is associated with
      * @param _staker Staker address
      * @return address[] Pool addresses
+     * @return uint256[] Staker stakeTKN
+     * @return uint256[] Staker stakeCAN
+     * @return uint256[] Staker rewardTKN
+     * @return uint256[] Staker rewardCAN
      */
     function getStakersPools(address _staker)
     external
     view
-    returns (address[] memory pools) {
+    returns (
+      address[] memory pools,
+      uint256[] memory stakeTKN,
+      uint256[] memory stakeCAN,
+      uint256[] memory rewardTKN,
+      uint256[] memory rewardCAN
+      ) {
         uint16 stakerPoolCount = mapStakerPoolCount[_staker];
-        pools = new address[](stakerPoolCount);
         for(uint16 i = 0; i < stakerPoolCount; i++){
             pools[i] = mapStakerPools[_staker][i];
+            (stakeTKN[i], stakeCAN[i], rewardTKN[i], rewardCAN[i]) = getStakersStake(token[i], _staker);
         }
-        return pools;
     }
 
     /**
@@ -796,7 +811,7 @@ contract CanSwap is Ownable {
      * @return uint256 Rewards allocated in CAN side of pool
      */
     function getStakersStake(address _pool, address _staker)
-    external
+    public
     view
     onlyActiveStaker(_pool, _staker)
     returns (
