@@ -715,7 +715,7 @@ contract CanSwap is Ownable {
      * @dev Get pool details for use on client
      * @param _poolId of the pool
      */
-    function getPoolMeta(uint16 _poolId)
+    function getPoolMetaById(uint16 _poolId)
     external
     view
     returns (
@@ -767,12 +767,19 @@ contract CanSwap is Ownable {
         uint256[] memory feeTKN,
         uint256[] memory feeCAN
     ) {
+        token = new address[](poolCount);
+        active = new bool[](poolCount);
+        balTKN = new uint256[](poolCount);
+        balCAN = new uint256[](poolCount);
+        feeTKN = new uint256[](poolCount);
+        feeCAN = new uint256[](poolCount);
         for(uint16 i = 0; i < poolCount; i++){
           token[i] = mapIndexToPool[i];
-          PoolStatus memory status = mapPoolStatus[_pool];
+          PoolStatus memory status = mapPoolStatus[token[i]];
           active[i] = status.active;
           (balTKN[i], balCAN[i], feeTKN[i], feeCAN[i]) = getPoolBalance(token[i]);
         }
+        return (token, active, balTKN, balCAN, feeTKN, feeCAN);
     }
 
     /**
@@ -795,10 +802,17 @@ contract CanSwap is Ownable {
       uint256[] memory rewardCAN
       ) {
         uint16 stakerPoolCount = mapStakerPoolCount[_staker];
+
+        pools = new address[](stakerPoolCount);
+        stakeTKN = new uint256[](stakerPoolCount);
+        stakeCAN = new uint256[](stakerPoolCount);
+        rewardTKN = new uint256[](stakerPoolCount);
+        rewardCAN = new uint256[](stakerPoolCount);
         for(uint16 i = 0; i < stakerPoolCount; i++){
             pools[i] = mapStakerPools[_staker][i];
-            (stakeTKN[i], stakeCAN[i], rewardTKN[i], rewardCAN[i]) = getStakersStake(token[i], _staker);
+            (stakeTKN[i], stakeCAN[i], rewardTKN[i], rewardCAN[i]) = getStakersStake(pools[i], _staker);
         }
+        return (pools, stakeTKN, stakeCAN, rewardTKN, rewardCAN);
     }
 
     /**
