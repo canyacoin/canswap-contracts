@@ -1,0 +1,405 @@
+{
+  "contracts": {
+    "CanSwap": {
+      "address": "0xb1cf06e0054c630fb3d63c26d9843a535e8d26dc",
+      "constructorCode": "608060405234801561001057600080fd5b5061450a806100206000396000f3fe",
+      "bodyBytecodeHash": "ce737b778456dfc1ed143debfb731fdb0e5a75855379e3f99a19d6629696bbdb",
+      "localBytecodeHash": "08aa65b449e746b9ccd3657c5ce6fe8d455904bb344aaeb5814a6798eefc12a1",
+      "deployedBytecodeHash": "8f6d3e488831ddbf31a3a054303510dbe9b55443e5e71201d4c0bf9e7694c9f8",
+      "types": {
+        "t_bool": {
+          "id": "t_bool",
+          "kind": "elementary",
+          "label": "bool"
+        },
+        "t_uint256": {
+          "id": "t_uint256",
+          "kind": "elementary",
+          "label": "uint256"
+        },
+        "t_array:50<t_uint256>": {
+          "id": "t_array:50<t_uint256>",
+          "valueType": "t_uint256",
+          "length": "50",
+          "kind": "array",
+          "label": "uint256[50]"
+        },
+        "t_address": {
+          "id": "t_address",
+          "kind": "elementary",
+          "label": "address"
+        },
+        "t_uint16": {
+          "id": "t_uint16",
+          "kind": "elementary",
+          "label": "uint16"
+        },
+        "t_mapping<t_address>": {
+          "id": "t_mapping<t_address>",
+          "valueType": "t_address",
+          "label": "mapping(key => address)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolDetails>": {
+          "id": "t_struct<CanSwap.PoolDetails>",
+          "kind": "struct",
+          "label": "CanSwap.PoolDetails",
+          "members": [
+            {
+              "label": "uri",
+              "astId": 14,
+              "type": "t_string",
+              "src": "746:10:0"
+            },
+            {
+              "label": "api",
+              "astId": 16,
+              "type": "t_string",
+              "src": "766:10:0"
+            }
+          ]
+        },
+        "t_string": {
+          "id": "t_string",
+          "kind": "elementary",
+          "label": "string"
+        },
+        "t_mapping<t_struct<CanSwap.PoolDetails>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolDetails>>",
+          "valueType": "t_struct<CanSwap.PoolDetails>",
+          "label": "mapping(key => CanSwap.PoolDetails)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolStatus>": {
+          "id": "t_struct<CanSwap.PoolStatus>",
+          "kind": "struct",
+          "label": "CanSwap.PoolStatus",
+          "members": [
+            {
+              "label": "exists",
+              "astId": 19,
+              "type": "t_bool",
+              "src": "844:11:0"
+            },
+            {
+              "label": "active",
+              "astId": 21,
+              "type": "t_bool",
+              "src": "865:11:0"
+            }
+          ]
+        },
+        "t_mapping<t_struct<CanSwap.PoolStatus>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolStatus>>",
+          "valueType": "t_struct<CanSwap.PoolStatus>",
+          "label": "mapping(key => CanSwap.PoolStatus)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolBalance>": {
+          "id": "t_struct<CanSwap.PoolBalance>",
+          "kind": "struct",
+          "label": "CanSwap.PoolBalance",
+          "members": [
+            {
+              "label": "balTKN",
+              "astId": 24,
+              "type": "t_uint256",
+              "src": "954:14:0"
+            },
+            {
+              "label": "balCAN",
+              "astId": 26,
+              "type": "t_uint256",
+              "src": "978:14:0"
+            }
+          ]
+        },
+        "t_mapping<t_struct<CanSwap.PoolBalance>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolBalance>>",
+          "valueType": "t_struct<CanSwap.PoolBalance>",
+          "label": "mapping(key => CanSwap.PoolBalance)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolFees>": {
+          "id": "t_struct<CanSwap.PoolFees>",
+          "kind": "struct",
+          "label": "CanSwap.PoolFees",
+          "members": [
+            {
+              "label": "feeTKN",
+              "astId": 29,
+              "type": "t_uint256",
+              "src": "1085:14:0"
+            },
+            {
+              "label": "feeCAN",
+              "astId": 31,
+              "type": "t_uint256",
+              "src": "1109:14:0"
+            }
+          ]
+        },
+        "t_mapping<t_struct<CanSwap.PoolFees>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolFees>>",
+          "valueType": "t_struct<CanSwap.PoolFees>",
+          "label": "mapping(key => CanSwap.PoolFees)",
+          "kind": "mapping"
+        },
+        "t_uint8": {
+          "id": "t_uint8",
+          "kind": "elementary",
+          "label": "uint8"
+        },
+        "t_mapping<t_uint8>": {
+          "id": "t_mapping<t_uint8>",
+          "valueType": "t_uint8",
+          "label": "mapping(key => uint8)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_uint16>": {
+          "id": "t_mapping<t_uint16>",
+          "valueType": "t_uint16",
+          "label": "mapping(key => uint16)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolStake>": {
+          "id": "t_struct<CanSwap.PoolStake>",
+          "kind": "struct",
+          "label": "CanSwap.PoolStake",
+          "members": [
+            {
+              "label": "stakeTKN",
+              "astId": 34,
+              "type": "t_uint256",
+              "src": "1204:16:0"
+            },
+            {
+              "label": "stakeCAN",
+              "astId": 36,
+              "type": "t_uint256",
+              "src": "1230:16:0"
+            }
+          ]
+        },
+        "t_mapping<t_struct<CanSwap.PoolStake>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolStake>>",
+          "valueType": "t_struct<CanSwap.PoolStake>",
+          "label": "mapping(key => CanSwap.PoolStake)",
+          "kind": "mapping"
+        },
+        "t_struct<CanSwap.PoolStakeRewards>": {
+          "id": "t_struct<CanSwap.PoolStakeRewards>",
+          "kind": "struct",
+          "label": "CanSwap.PoolStakeRewards",
+          "members": [
+            {
+              "label": "rewardTKN",
+              "astId": 39,
+              "type": "t_uint256",
+              "src": "1497:17:0"
+            },
+            {
+              "label": "rewardCAN",
+              "astId": 41,
+              "type": "t_uint256",
+              "src": "1524:17:0"
+            }
+          ]
+        },
+        "t_mapping<t_struct<CanSwap.PoolStakeRewards>>": {
+          "id": "t_mapping<t_struct<CanSwap.PoolStakeRewards>>",
+          "valueType": "t_struct<CanSwap.PoolStakeRewards>",
+          "label": "mapping(key => CanSwap.PoolStakeRewards)",
+          "kind": "mapping"
+        },
+        "t_mapping<t_bool>": {
+          "id": "t_mapping<t_bool>",
+          "valueType": "t_bool",
+          "label": "mapping(key => bool)",
+          "kind": "mapping"
+        }
+      },
+      "storage": [
+        {
+          "contract": "Initializable",
+          "path": "contracts/Initializable.sol",
+          "label": "initialized",
+          "astId": 2528,
+          "type": "t_bool",
+          "src": "754:24:3"
+        },
+        {
+          "contract": "Initializable",
+          "path": "contracts/Initializable.sol",
+          "label": "initializing",
+          "astId": 2530,
+          "type": "t_bool",
+          "src": "879:25:3"
+        },
+        {
+          "contract": "Initializable",
+          "path": "contracts/Initializable.sol",
+          "label": "______gap",
+          "astId": 2579,
+          "type": "t_array:50<t_uint256>",
+          "src": "2006:29:3"
+        },
+        {
+          "contract": "Ownable",
+          "path": "contracts/Ownable.sol",
+          "label": "_owner",
+          "astId": 2644,
+          "type": "t_address",
+          "src": "286:22:5"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "CAN",
+          "astId": 118,
+          "type": "t_address",
+          "src": "2535:17:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "poolCount",
+          "astId": 120,
+          "type": "t_uint16",
+          "src": "2620:23:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapIndexToPool",
+          "astId": 124,
+          "type": "t_mapping<t_address>",
+          "src": "2649:41:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolDetails",
+          "astId": 128,
+          "type": "t_mapping<t_struct<CanSwap.PoolDetails>>",
+          "src": "2753:46:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolStatus",
+          "astId": 132,
+          "type": "t_mapping<t_struct<CanSwap.PoolStatus>>",
+          "src": "2805:44:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolBalances",
+          "astId": 136,
+          "type": "t_mapping<t_struct<CanSwap.PoolBalance>>",
+          "src": "2855:47:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolFees",
+          "astId": 140,
+          "type": "t_mapping<t_struct<CanSwap.PoolFees>>",
+          "src": "2908:40:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolMinimumStake",
+          "astId": 144,
+          "type": "t_mapping<t_uint8>",
+          "src": "2955:45:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolStakerCount",
+          "astId": 148,
+          "type": "t_mapping<t_uint16>",
+          "src": "3065:45:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolStakerAddress",
+          "astId": 154,
+          "type": "t_mapping<t_address>",
+          "src": "3116:67:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolStakes",
+          "astId": 160,
+          "type": "t_mapping<t_struct<CanSwap.PoolStake>>",
+          "src": "3189:63:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapPoolStakeRewards",
+          "astId": 166,
+          "type": "t_mapping<t_struct<CanSwap.PoolStakeRewards>>",
+          "src": "3258:76:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapStakerPoolCount",
+          "astId": 170,
+          "type": "t_mapping<t_uint16>",
+          "src": "3391:45:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapStakerPools",
+          "astId": 176,
+          "type": "t_mapping<t_address>",
+          "src": "3442:61:0"
+        },
+        {
+          "contract": "CanSwap",
+          "path": "contracts/CanSwap.sol",
+          "label": "mapStakerHasStakedInPool",
+          "astId": 182,
+          "type": "t_mapping<t_bool>",
+          "src": "3509:69:0"
+        }
+      ],
+      "warnings": {
+        "hasConstructor": false,
+        "hasSelfDestruct": false,
+        "hasDelegateCall": false,
+        "hasInitialValuesInDeclarations": false,
+        "uninitializedBaseContracts": []
+      }
+    }
+  },
+  "solidityLibs": {
+    "CanSwapMath": {
+      "address": "0x5f9679f7d7d7623948f360d11cbe00168fc88102",
+      "constructorCode": "61042b610030600b82828239805160001a6073146000811461002057610022565bfe5b5030600052607381538281f3fe",
+      "bodyBytecodeHash": "3277aa5aeb7e9b791c374e4344b0102817ec354d8ca156d1d4eddff89fd7444f",
+      "localBytecodeHash": "4a3e98ecbdc298f42bca8446e0e7bde017e3edf1c00ab8283d398b4fad1fc452",
+      "deployedBytecodeHash": "4a3e98ecbdc298f42bca8446e0e7bde017e3edf1c00ab8283d398b4fad1fc452"
+    }
+  },
+  "proxies": {
+    "CanSwap/CanSwap": [
+      {
+        "address": "0xcb005dc0bd266e2ff4a3d416dc51c292a7e297fb",
+        "version": "0.1.0",
+        "implementation": "0xb1cf06e0054c630fb3d63c26d9843a535e8d26dc"
+      }
+    ]
+  },
+  "zosversion": "2",
+  "version": "0.1.0"
+}

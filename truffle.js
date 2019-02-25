@@ -12,6 +12,10 @@
  *   },
  */
 
+
+const HDWalletProvider = require('truffle-hdwallet-provider');
+const infuraKey = "xx";
+
 module.exports = {
   // See <http://truffleframework.com/docs/advanced/configuration>
   // to customize your Truffle configuration!
@@ -23,6 +27,13 @@ module.exports = {
       gasPrice: 0x1,
       gas: 0x1fffffffffff,
       network_id: '*'
+    },
+    rinkeby: {
+      provider: function() { 
+        return new HDWalletProvider(process.env.WALLET_MNEMONIC, `https://rinkeby.infura.io/${infuraKey}`) 
+      },
+      network_id: 4,
+      gasPrice: 10000000000, // 10 GWei
     }
   },
   solc: {

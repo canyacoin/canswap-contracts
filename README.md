@@ -109,6 +109,13 @@ __*pool fees*__ - These are service fees collected during the `swap` function (w
 ### Upgrading on Ropsten/Mainnet
 - As per [docs](https://docs.zeppelinos.org/docs/upgrading.html) do...
 
+### Problems/future 
+- Concurrency
+- Ensure that decimals dont matter
+- Block anyone from creating pools - need to verify the underlying token
+  - No way to ensure the token is ERC20 or not.. 
+
+
 
 ## Resources
 :page_with_curl: [Whitepaper](https://github.com/canyaio/canswap-contracts/blob/master/resources/Whitepaper.pdf)
