@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "openzeppelin-eth": "^2.0.2",
-    "zos-lib": "^2.0.2"
+    "zos-lib": "^2.4.3"
   },
   "devDependencies": {
     "chai": "^4.2.0",
